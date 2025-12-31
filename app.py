@@ -1,828 +1,1361 @@
 """
-Consumer Behaviour Learning System
-Interactive study app for COBE201-1 - Units 1 & 2
-Built for first-year Business Management students
+Consumer Behaviour Learning Hub - Duolingo Style
+Gamified interactive learning for COBE201-1
 """
 
 import streamlit as st
 import random
+import json
+from datetime import datetime, timedelta
+import time
 
 # Page configuration
 st.set_page_config(
-    page_title="Consumer Behaviour Learning Hub",
-    page_icon="📚",
+    page_title="ConsumerQuest - Learn Consumer Behaviour",
+    page_icon="🦉",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for better visuals
+# ============== CUSTOM CSS - DUOLINGO STYLE ==============
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1E3A8A;
-        text-align: center;
-        padding: 1rem;
-        background: linear-gradient(90deg, #DBEAFE 0%, #EDE9FE 100%);
-        border-radius: 10px;
-        margin-bottom: 2rem;
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+    * {
+        font-family: 'Nunito', sans-serif;
     }
-    .concept-card {
-        background: #F8FAFC;
-        padding: 1.5rem;
-        border-radius: 10px;
-        border-left: 5px solid #3B82F6;
-        margin: 1rem 0;
+
+    .stApp {
+        background: linear-gradient(180deg, #235390 0%, #1a4275 100%);
+        min-height: 100vh;
     }
-    .quiz-correct {
-        background: #D1FAE5;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 2px solid #10B981;
+
+    /* Hide Streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Top Stats Bar */
+    .stats-bar {
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
     }
-    .quiz-incorrect {
-        background: #FEE2E2;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 2px solid #EF4444;
-    }
-    .flashcard {
-        background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         color: white;
-        padding: 2rem;
-        border-radius: 15px;
-        text-align: center;
-        min-height: 200px;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .stat-icon {
+        font-size: 1.5rem;
+    }
+
+    /* XP Bar */
+    .xp-container {
+        background: rgba(255,255,255,0.2);
+        border-radius: 20px;
+        height: 24px;
+        width: 200px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .xp-fill {
+        background: linear-gradient(90deg, #FFC800 0%, #FF9500 100%);
+        height: 100%;
+        border-radius: 20px;
+        transition: width 0.5s ease;
+    }
+
+    .xp-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-weight: 700;
+        font-size: 0.8rem;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+
+    /* Hearts */
+    .hearts {
+        color: #FF4B4B;
+        font-size: 1.5rem;
+        letter-spacing: 4px;
+    }
+
+    /* Streak */
+    .streak-fire {
+        animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    /* Main Card */
+    .main-card {
+        background: white;
+        border-radius: 24px;
+        padding: 30px;
+        margin: 20px auto;
+        max-width: 700px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+
+    /* Lesson Card */
+    .lesson-card {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
+        margin: 16px 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border: 3px solid #E5E5E5;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .lesson-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        border-color: #58CC02;
+    }
+
+    .lesson-card.locked {
+        opacity: 0.6;
+        background: #F7F7F7;
+    }
+
+    .lesson-card.completed {
+        border-color: #58CC02;
+        background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+    }
+
+    /* Progress Circle */
+    .progress-circle {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: conic-gradient(#58CC02 var(--progress), #E5E5E5 0deg);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
-        cursor: pointer;
+        position: relative;
     }
-    .stProgress > div > div > div > div {
-        background-color: #10B981;
+
+    .progress-circle-inner {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    /* Question Card */
+    .question-card {
+        background: #F7F7F7;
+        border-radius: 16px;
+        padding: 24px;
+        margin: 20px 0;
+        text-align: center;
+    }
+
+    .question-text {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #3C3C3C;
+        margin-bottom: 24px;
+    }
+
+    /* Answer Options */
+    .option-btn {
+        background: white;
+        border: 2px solid #E5E5E5;
+        border-radius: 16px;
+        padding: 16px 24px;
+        margin: 8px 0;
+        width: 100%;
+        text-align: left;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #3C3C3C;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .option-btn:hover {
+        border-color: #1CB0F6;
+        background: #E8F7FF;
+    }
+
+    .option-btn.selected {
+        border-color: #1CB0F6;
+        background: #DDF4FF;
+        border-width: 3px;
+    }
+
+    .option-btn.correct {
+        border-color: #58CC02;
+        background: #D7FFB8;
+        border-width: 3px;
+    }
+
+    .option-btn.incorrect {
+        border-color: #FF4B4B;
+        background: #FFDFE0;
+        border-width: 3px;
+    }
+
+    /* Check Button */
+    .check-btn {
+        background: linear-gradient(180deg, #58CC02 0%, #46A302 100%);
+        color: white;
+        border: none;
+        border-radius: 16px;
+        padding: 16px 48px;
+        font-size: 1.2rem;
+        font-weight: 700;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 4px 0 #46A302;
+        transition: all 0.1s ease;
+        margin-top: 20px;
+    }
+
+    .check-btn:hover {
+        background: linear-gradient(180deg, #62D902 0%, #50B302 100%);
+    }
+
+    .check-btn:active {
+        transform: translateY(4px);
+        box-shadow: none;
+    }
+
+    .check-btn:disabled {
+        background: #E5E5E5;
+        box-shadow: 0 4px 0 #CDCDCD;
+        cursor: not-allowed;
+    }
+
+    /* Feedback Banner */
+    .feedback-correct {
+        background: #D7FFB8;
+        border-top: 4px solid #58CC02;
+        padding: 20px;
+        border-radius: 0 0 16px 16px;
+        margin-top: 20px;
+    }
+
+    .feedback-incorrect {
+        background: #FFDFE0;
+        border-top: 4px solid #FF4B4B;
+        padding: 20px;
+        border-radius: 0 0 16px 16px;
+        margin-top: 20px;
+    }
+
+    .feedback-title {
+        font-size: 1.3rem;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .feedback-correct .feedback-title { color: #58A700; }
+    .feedback-incorrect .feedback-title { color: #EA2B2B; }
+
+    /* Achievement Badge */
+    .badge {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        background: linear-gradient(135deg, #FFC800 0%, #FF9500 100%);
+        border-radius: 16px;
+        padding: 16px;
+        margin: 8px;
+        min-width: 100px;
+        box-shadow: 0 4px 12px rgba(255,200,0,0.3);
+    }
+
+    .badge.locked {
+        background: linear-gradient(135deg, #CDCDCD 0%, #AFAFAF 100%);
+        box-shadow: none;
+    }
+
+    .badge-icon {
+        font-size: 2.5rem;
+        margin-bottom: 8px;
+    }
+
+    .badge-name {
+        color: white;
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    /* Celebration Confetti */
+    .confetti {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+    }
+
+    .confetti-piece {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        animation: confetti-fall 3s ease-out forwards;
+    }
+
+    @keyframes confetti-fall {
+        0% {
+            transform: translateY(-100vh) rotate(0deg);
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(100vh) rotate(720deg);
+            opacity: 0;
+        }
+    }
+
+    /* Mascot */
+    .mascot {
+        font-size: 4rem;
+        animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    /* Level Badge */
+    .level-badge {
+        background: linear-gradient(135deg, #CE82FF 0%, #7C3AED 100%);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: inline-block;
+    }
+
+    /* Gems */
+    .gems {
+        color: #1CB0F6;
+        font-weight: 700;
+    }
+
+    /* Unit Path */
+    .unit-header {
+        background: linear-gradient(135deg, #58CC02 0%, #46A302 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 16px;
+        margin: 20px 0;
+        text-align: center;
+    }
+
+    .unit-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    /* Lesson Node */
+    .lesson-node {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin: 10px auto;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .lesson-node.available {
+        background: linear-gradient(135deg, #58CC02 0%, #46A302 100%);
+        box-shadow: 0 6px 0 #3D7A02;
+    }
+
+    .lesson-node.available:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 0 #3D7A02;
+    }
+
+    .lesson-node.completed {
+        background: linear-gradient(135deg, #FFC800 0%, #FF9500 100%);
+        box-shadow: 0 6px 0 #CC7700;
+    }
+
+    .lesson-node.locked {
+        background: #CDCDCD;
+        box-shadow: 0 6px 0 #AFAFAF;
+        cursor: not-allowed;
+    }
+
+    /* Crown for completed */
+    .crown {
+        position: absolute;
+        top: -15px;
+        font-size: 1.2rem;
+    }
+
+    /* Daily Goal */
+    .daily-goal {
+        background: linear-gradient(135deg, #FFE066 0%, #FFC800 100%);
+        border-radius: 16px;
+        padding: 16px;
+        text-align: center;
+        margin: 16px 0;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .main-card {
+            margin: 10px;
+            padding: 20px;
+            border-radius: 16px;
+        }
+
+        .question-text {
+            font-size: 1.2rem;
+        }
+
+        .stats-bar {
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .xp-container {
+            width: 150px;
+        }
+    }
+
+    /* Matching Game */
+    .match-item {
+        background: white;
+        border: 2px solid #E5E5E5;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-block;
+    }
+
+    .match-item:hover {
+        border-color: #1CB0F6;
+    }
+
+    .match-item.selected {
+        border-color: #1CB0F6;
+        background: #DDF4FF;
+    }
+
+    .match-item.matched {
+        border-color: #58CC02;
+        background: #D7FFB8;
+        opacity: 0.6;
+    }
+
+    /* Typing exercise */
+    .typing-input {
+        font-size: 1.2rem;
+        padding: 16px;
+        border: 2px solid #E5E5E5;
+        border-radius: 12px;
+        width: 100%;
+        text-align: center;
+    }
+
+    .typing-input:focus {
+        border-color: #1CB0F6;
+        outline: none;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ============== DATA DEFINITIONS ==============
 
-# Key Definitions for Flashcards
-FLASHCARDS = [
-    {
-        "term": "Consumer Behaviour",
-        "definition": "The study of individuals, groups, or organizations and the processes they use to select, secure, use, and dispose of products, services, experiences, or ideas to satisfy their needs."
-    },
-    {
-        "term": "Need Recognition",
-        "definition": "The first stage of decision-making where the consumer identifies a gap between their current state and desired state."
-    },
-    {
-        "term": "Complex Buying Behaviour",
-        "definition": "High involvement purchase with significant differences between brands. Example: buying a car or house."
-    },
-    {
-        "term": "Habitual Buying Behaviour",
-        "definition": "Low involvement purchase with few differences between brands. Example: buying salt or sugar."
-    },
-    {
-        "term": "Dissonance-Reducing Behaviour",
-        "definition": "High involvement but few perceived differences between brands. Buyer may experience post-purchase dissonance."
-    },
-    {
-        "term": "Variety-Seeking Behaviour",
-        "definition": "Low involvement but significant brand differences. Consumer switches brands for variety, not dissatisfaction."
-    },
-    {
-        "term": "Market Segmentation",
-        "definition": "Dividing a market into distinct groups of buyers with different needs, characteristics, or behaviours."
-    },
-    {
-        "term": "Targeting",
-        "definition": "Evaluating each market segment's attractiveness and selecting one or more segments to enter."
-    },
-    {
-        "term": "Positioning",
-        "definition": "Arranging for a product to occupy a clear, distinctive, and desirable place in target consumers' minds."
-    },
-    {
-        "term": "Customer Retention Rate",
-        "definition": "The percentage of customers a company retains over a given period. Formula: ((CE-CN)/CS) x 100"
-    },
-    {
-        "term": "Churn Rate",
-        "definition": "The percentage of customers who stop using a product/service. Formula: (Lost Customers / Total Customers at Start) x 100"
-    },
-    {
-        "term": "Perceptual Map",
-        "definition": "A visual representation of how consumers perceive brands based on key attributes like price and quality."
-    },
-    {
-        "term": "Evoked Set",
-        "definition": "The set of brands that a consumer considers when making a purchase decision."
-    },
-    {
-        "term": "Post-Purchase Behaviour",
-        "definition": "Consumer actions after buying, including satisfaction evaluation, brand loyalty, or cognitive dissonance."
-    },
-    {
-        "term": "Geographic Segmentation",
-        "definition": "Dividing markets by location: nations, states, regions, cities, or neighborhoods."
-    },
-    {
-        "term": "Psychographic Segmentation",
-        "definition": "Dividing buyers based on lifestyle, personality, values, and social class."
-    },
-    {
-        "term": "Behavioural Segmentation",
-        "definition": "Dividing buyers based on knowledge, attitudes, uses, or responses to a product."
-    }
-]
-
-# Quiz Questions
-QUIZ_QUESTIONS = [
-    {
-        "question": "What is the FIRST stage in the consumer decision-making process?",
-        "options": ["Information Search", "Need Recognition", "Evaluation of Alternatives", "Purchase Decision"],
-        "correct": 1,
-        "explanation": "Need Recognition is when the consumer realizes there's a gap between their current state and desired state."
-    },
-    {
-        "question": "Riya is buying her first laptop for college. She researches extensively, compares brands, and reads reviews. What type of buying behaviour is this?",
-        "options": ["Habitual Buying", "Variety-Seeking", "Complex Buying", "Dissonance-Reducing"],
-        "correct": 2,
-        "explanation": "Complex Buying Behaviour involves high involvement and significant differences between brands."
-    },
-    {
-        "question": "Arjun buys the same brand of salt every week without much thought. This is an example of:",
-        "options": ["Complex Buying Behaviour", "Dissonance-Reducing Behaviour", "Variety-Seeking Behaviour", "Habitual Buying Behaviour"],
-        "correct": 3,
-        "explanation": "Habitual Buying involves low involvement and few perceived differences between brands."
-    },
-    {
-        "question": "What does STP stand for in marketing?",
-        "options": ["Sales, Target, Profit", "Segmentation, Targeting, Positioning", "Strategy, Tactics, Planning", "Supply, Trade, Purchase"],
-        "correct": 1,
-        "explanation": "STP is the foundation of marketing strategy: Segmenting the market, Targeting segments, and Positioning the brand."
-    },
-    {
-        "question": "A company started with 1000 customers, gained 200 new customers, and ended with 900. What is the retention rate?",
-        "options": ["70%", "80%", "90%", "60%"],
-        "correct": 0,
-        "explanation": "Retention Rate = ((CE-CN)/CS) x 100 = ((900-200)/1000) x 100 = 70%"
-    },
-    {
-        "question": "Priya likes trying different chocolate brands each time. Which buying behaviour is this?",
-        "options": ["Complex Buying", "Habitual Buying", "Variety-Seeking", "Dissonance-Reducing"],
-        "correct": 2,
-        "explanation": "Variety-Seeking involves low involvement but switching brands for the sake of variety."
-    },
-    {
-        "question": "Which segmentation type divides customers based on lifestyle and values?",
-        "options": ["Geographic", "Demographic", "Psychographic", "Behavioural"],
-        "correct": 2,
-        "explanation": "Psychographic segmentation groups people by lifestyle, personality, values, and social class."
-    },
-    {
-        "question": "What is the formula for Churn Rate?",
-        "options": [
-            "(New Customers / Total) x 100",
-            "(Lost Customers / Starting Customers) x 100",
-            "(Retained / Total) x 100",
-            "(Profit / Revenue) x 100"
-        ],
-        "correct": 1,
-        "explanation": "Churn Rate measures customer loss: (Lost Customers / Total Customers at Start) x 100"
-    },
-    {
-        "question": "Rahul bought an expensive sofa but felt uncertain afterward if he made the right choice. This is called:",
-        "options": ["Buyer's Remorse", "Cognitive Dissonance", "Post-Purchase Evaluation", "Brand Switching"],
-        "correct": 1,
-        "explanation": "Cognitive Dissonance is the discomfort felt after a high-involvement purchase when uncertain about the decision."
-    },
-    {
-        "question": "Which is NOT a stage in the decision-making process?",
-        "options": ["Need Recognition", "Brand Loyalty", "Purchase Decision", "Post-Purchase Behaviour"],
-        "correct": 1,
-        "explanation": "The 5 stages are: Need Recognition, Information Search, Evaluation, Purchase Decision, Post-Purchase Behaviour."
-    }
-]
-
-# Case Studies
-CASE_STUDIES = [
-    {
-        "title": "Cafe Coffee Day vs Starbucks",
-        "scenario": """
-        Ananya, a 22-year-old MBA student, visits coffee shops frequently. She notices:
-        - CCD: Affordable, local feel, good for group studies
-        - Starbucks: Premium pricing, aspirational brand, Instagram-worthy
-
-        For daily coffee, she goes to CCD. But for special occasions or social media posts, she chooses Starbucks.
-        """,
-        "questions": [
+LESSONS = {
+    "unit1": {
+        "title": "Consumer Behaviour Basics",
+        "icon": "🧠",
+        "lessons": [
             {
-                "q": "What type of segmentation does Starbucks primarily use?",
-                "options": ["Geographic", "Psychographic", "Demographic", "Behavioural"],
-                "correct": 1,
-                "explanation": "Starbucks targets based on lifestyle and aspirations (psychographic segmentation)."
+                "id": "1.1",
+                "name": "What is Consumer Behaviour?",
+                "icon": "📚",
+                "xp": 10,
+                "questions": [
+                    {
+                        "type": "multiple_choice",
+                        "question": "Consumer Behaviour is the study of...",
+                        "options": [
+                            "How companies make products",
+                            "How individuals select, use, and dispose of products",
+                            "How to advertise products",
+                            "How to set prices"
+                        ],
+                        "correct": 1,
+                        "explanation": "Consumer Behaviour studies how people make decisions about buying and using products!"
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Which is NOT a part of consumer behaviour study?",
+                        "options": [
+                            "Purchase decisions",
+                            "Product disposal",
+                            "Factory manufacturing",
+                            "Brand selection"
+                        ],
+                        "correct": 2,
+                        "explanation": "Factory manufacturing is about production, not consumer behaviour!"
+                    },
+                    {
+                        "type": "fill_blank",
+                        "question": "Consumer behaviour helps marketers understand customer _____ and _____.",
+                        "answer": ["needs", "wants"],
+                        "hint": "Think about what drives people to buy things"
+                    }
+                ]
             },
             {
-                "q": "What buying behaviour does Ananya show for daily coffee?",
-                "options": ["Complex", "Habitual", "Variety-Seeking", "Dissonance-Reducing"],
-                "correct": 1,
-                "explanation": "Daily coffee is low involvement with brand loyalty - habitual buying."
+                "id": "1.2",
+                "name": "Decision Making Process",
+                "icon": "🎯",
+                "xp": 15,
+                "questions": [
+                    {
+                        "type": "order",
+                        "question": "Put these decision-making steps in the correct order:",
+                        "items": ["Need Recognition", "Information Search", "Evaluation of Alternatives", "Purchase Decision", "Post-Purchase Behaviour"],
+                        "correct_order": [0, 1, 2, 3, 4]
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Riya realizes her phone battery doesn't last all day. This is which stage?",
+                        "options": ["Information Search", "Need Recognition", "Evaluation", "Purchase"],
+                        "correct": 1,
+                        "explanation": "Need Recognition is when you realize there's a gap between your current and desired situation!"
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Watching YouTube reviews before buying is which stage?",
+                        "options": ["Need Recognition", "Information Search", "Post-Purchase", "Evaluation"],
+                        "correct": 1,
+                        "explanation": "Information Search is gathering data about possible solutions!"
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Comparing Samsung vs iPhone features is which stage?",
+                        "options": ["Information Search", "Need Recognition", "Evaluation of Alternatives", "Purchase Decision"],
+                        "correct": 2,
+                        "explanation": "Evaluation is when you compare different options against each other!"
+                    }
+                ]
+            },
+            {
+                "id": "1.3",
+                "name": "4 Types of Buying Behaviour",
+                "icon": "🛒",
+                "xp": 20,
+                "questions": [
+                    {
+                        "type": "matching",
+                        "question": "Match the buying behaviour with its characteristics:",
+                        "pairs": [
+                            {"left": "Complex Buying", "right": "High involvement, many brand differences"},
+                            {"left": "Habitual Buying", "right": "Low involvement, few brand differences"},
+                            {"left": "Variety Seeking", "right": "Low involvement, many brand differences"},
+                            {"left": "Dissonance Reducing", "right": "High involvement, few brand differences"}
+                        ]
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Buying salt without much thought is an example of:",
+                        "options": ["Complex Buying", "Variety Seeking", "Habitual Buying", "Dissonance Reducing"],
+                        "correct": 2,
+                        "explanation": "Habitual Buying = Low involvement + Few brand differences. You just grab what you always buy!"
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Buying a house involves extensive research. This is:",
+                        "options": ["Habitual Buying", "Complex Buying", "Variety Seeking", "Impulse Buying"],
+                        "correct": 1,
+                        "explanation": "Complex Buying = High involvement + Significant brand differences. Big decisions need lots of research!"
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Priya tries different chocolate brands each time for fun. This is:",
+                        "options": ["Complex Buying", "Habitual Buying", "Variety Seeking", "Dissonance Reducing"],
+                        "correct": 2,
+                        "explanation": "Variety Seeking = Low involvement but switching brands for novelty, not dissatisfaction!"
+                    }
+                ]
             }
         ]
     },
-    {
-        "title": "Smartphone Purchase Journey",
-        "scenario": """
-        Vikram wants to buy a new smartphone (budget: Rs 30,000-40,000). His journey:
-        1. Old phone slowing down (realizes need)
-        2. Watches YouTube reviews, asks friends (information search)
-        3. Compares Samsung, OnePlus, iPhone SE (evaluation)
-        4. Visits store, tests phones, buys OnePlus (purchase)
-        5. Posts on social media, recommends to others (post-purchase)
-        """,
-        "questions": [
+    "unit2": {
+        "title": "Marketing Strategy - STP",
+        "icon": "🎯",
+        "lessons": [
             {
-                "q": "Which stage involves watching YouTube reviews?",
-                "options": ["Need Recognition", "Information Search", "Evaluation", "Purchase Decision"],
-                "correct": 1,
-                "explanation": "Watching reviews and asking friends is Information Search stage."
+                "id": "2.1",
+                "name": "Market Segmentation",
+                "icon": "📊",
+                "xp": 15,
+                "questions": [
+                    {
+                        "type": "multiple_choice",
+                        "question": "Segmentation means:",
+                        "options": [
+                            "Selling to everyone",
+                            "Dividing market into distinct groups",
+                            "Setting prices",
+                            "Creating ads"
+                        ],
+                        "correct": 1,
+                        "explanation": "Segmentation divides the market into groups with similar needs!"
+                    },
+                    {
+                        "type": "matching",
+                        "question": "Match segmentation type with example:",
+                        "pairs": [
+                            {"left": "Geographic", "right": "Urban vs Rural customers"},
+                            {"left": "Demographic", "right": "Age groups 18-25, 26-40"},
+                            {"left": "Psychographic", "right": "Health-conscious lifestyle"},
+                            {"left": "Behavioural", "right": "Frequent vs occasional buyers"}
+                        ]
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Targeting fitness enthusiasts is which segmentation?",
+                        "options": ["Geographic", "Demographic", "Psychographic", "Behavioural"],
+                        "correct": 2,
+                        "explanation": "Psychographic segmentation is based on lifestyle, values, and interests!"
+                    }
+                ]
             },
             {
-                "q": "Vikram's smartphone purchase is an example of:",
-                "options": ["Habitual Buying", "Variety-Seeking", "Complex Buying", "Impulse Buying"],
-                "correct": 2,
-                "explanation": "High involvement + significant brand differences = Complex Buying Behaviour."
-            }
-        ]
-    },
-    {
-        "title": "Netflix Customer Retention",
-        "scenario": """
-        Netflix India data (hypothetical):
-        - Start of year: 10,000 subscribers
-        - New subscribers gained: 3,000
-        - End of year: 11,000 subscribers
-        - Subscription cost increased by 20%
-
-        Many users share passwords. Netflix introduced cheaper mobile-only plans.
-        """,
-        "questions": [
-            {
-                "q": "What is Netflix's customer retention rate?",
-                "options": ["80%", "90%", "110%", "70%"],
-                "correct": 0,
-                "explanation": "Retention = ((11000-3000)/10000) x 100 = 80%. They lost 2000 and gained 3000."
+                "id": "2.2",
+                "name": "Targeting & Positioning",
+                "icon": "🎪",
+                "xp": 15,
+                "questions": [
+                    {
+                        "type": "multiple_choice",
+                        "question": "What does STP stand for?",
+                        "options": [
+                            "Sales, Trade, Profit",
+                            "Segmentation, Targeting, Positioning",
+                            "Strategy, Tactics, Planning",
+                            "Supply, Transport, Production"
+                        ],
+                        "correct": 1,
+                        "explanation": "STP = Segmentation, Targeting, Positioning - the foundation of marketing strategy!"
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Rolex focuses only on luxury buyers. This targeting is:",
+                        "options": ["Undifferentiated", "Differentiated", "Concentrated", "Micro"],
+                        "correct": 2,
+                        "explanation": "Concentrated targeting focuses on one specific segment!"
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Positioning is about:",
+                        "options": [
+                            "Where to place products in store",
+                            "How customers perceive your brand vs competitors",
+                            "Geographic location",
+                            "Price setting"
+                        ],
+                        "correct": 1,
+                        "explanation": "Positioning is the place your brand occupies in customers' minds!"
+                    }
+                ]
             },
             {
-                "q": "Mobile-only plans target which segment?",
-                "options": ["Premium users", "Price-sensitive users", "International users", "Business users"],
-                "correct": 1,
-                "explanation": "Cheaper mobile plans target price-sensitive customers (behavioural/economic segmentation)."
+                "id": "2.3",
+                "name": "Customer Retention & Churn",
+                "icon": "📈",
+                "xp": 20,
+                "questions": [
+                    {
+                        "type": "multiple_choice",
+                        "question": "Customer Retention Rate measures:",
+                        "options": [
+                            "New customers gained",
+                            "Customers kept over time",
+                            "Total revenue",
+                            "Market share"
+                        ],
+                        "correct": 1,
+                        "explanation": "Retention Rate = percentage of customers you keep!"
+                    },
+                    {
+                        "type": "calculation",
+                        "question": "Company had 1000 customers at start, gained 200 new, ended with 900. What's the retention rate?",
+                        "formula": "((CE-CN)/CS) × 100 = ((900-200)/1000) × 100",
+                        "answer": 70,
+                        "unit": "%",
+                        "explanation": "Lost 300 customers (1000→900+200new=1200-300=900), so retained 700 out of 1000 = 70%"
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question": "Churn Rate is:",
+                        "options": [
+                            "Same as retention rate",
+                            "Opposite of retention rate",
+                            "New customer rate",
+                            "Growth rate"
+                        ],
+                        "correct": 1,
+                        "explanation": "Churn Rate = 100% - Retention Rate. It measures customer loss!"
+                    },
+                    {
+                        "type": "calculation",
+                        "question": "If retention rate is 70%, what is the churn rate?",
+                        "formula": "100% - 70%",
+                        "answer": 30,
+                        "unit": "%",
+                        "explanation": "Churn = 100% - Retention = 100% - 70% = 30%"
+                    }
+                ]
             }
         ]
     }
+}
+
+ACHIEVEMENTS = [
+    {"id": "first_lesson", "name": "First Steps", "icon": "👶", "desc": "Complete your first lesson", "xp_required": 0, "lessons_required": 1},
+    {"id": "streak_3", "name": "On Fire", "icon": "🔥", "desc": "3 day streak", "streak_required": 3},
+    {"id": "streak_7", "name": "Week Warrior", "icon": "⚡", "desc": "7 day streak", "streak_required": 7},
+    {"id": "perfect_lesson", "name": "Perfectionist", "icon": "💎", "desc": "Complete a lesson with no mistakes", "perfect_required": True},
+    {"id": "xp_100", "name": "Century", "icon": "💯", "desc": "Earn 100 XP", "xp_required": 100},
+    {"id": "xp_500", "name": "Scholar", "icon": "🎓", "desc": "Earn 500 XP", "xp_required": 500},
+    {"id": "unit_complete", "name": "Unit Master", "icon": "🏆", "desc": "Complete a full unit", "unit_required": True},
+    {"id": "all_lessons", "name": "Consumer Expert", "icon": "👑", "desc": "Complete all lessons", "all_required": True}
 ]
 
-# Decision Making Process Steps
-DECISION_PROCESS = [
-    {"step": 1, "name": "Need Recognition", "icon": "💡", "description": "Consumer realizes a gap between current and desired state", "example": "Your phone battery doesn't last a full day anymore"},
-    {"step": 2, "name": "Information Search", "icon": "🔍", "description": "Consumer seeks information about solutions", "example": "Reading reviews, asking friends, visiting stores"},
-    {"step": 3, "name": "Evaluation of Alternatives", "icon": "⚖️", "description": "Consumer compares different options", "example": "Comparing iPhone vs Samsung vs OnePlus features"},
-    {"step": 4, "name": "Purchase Decision", "icon": "🛒", "description": "Consumer decides which product to buy", "example": "Choosing OnePlus based on value for money"},
-    {"step": 5, "name": "Post-Purchase Behaviour", "icon": "🔄", "description": "Consumer evaluates satisfaction after purchase", "example": "Feeling happy with choice or experiencing regret"}
-]
+DAILY_GOALS = [10, 20, 30, 50]  # XP targets
 
-# Buying Behaviour Types
-BUYING_BEHAVIOURS = [
-    {
-        "type": "Complex Buying",
-        "involvement": "High",
-        "brand_diff": "Significant",
-        "color": "#EF4444",
-        "examples": ["Cars", "Houses", "Laptops", "Education"],
-        "characteristics": "Extensive research, multiple evaluations, high risk"
-    },
-    {
-        "type": "Dissonance-Reducing",
-        "involvement": "High",
-        "brand_diff": "Few",
-        "color": "#F59E0B",
-        "examples": ["Carpet", "Furniture", "Air Conditioner"],
-        "characteristics": "May feel uncertainty after purchase, seeks reassurance"
-    },
-    {
-        "type": "Variety-Seeking",
-        "involvement": "Low",
-        "brand_diff": "Significant",
-        "color": "#10B981",
-        "examples": ["Snacks", "Beverages", "Cosmetics"],
-        "characteristics": "Switches brands for novelty, not dissatisfaction"
-    },
-    {
-        "type": "Habitual Buying",
-        "involvement": "Low",
-        "brand_diff": "Few",
-        "color": "#3B82F6",
-        "examples": ["Salt", "Sugar", "Milk", "Bread"],
-        "characteristics": "Automatic purchases, brand loyalty through habit"
+# ============== SESSION STATE INITIALIZATION ==============
+
+def init_session_state():
+    defaults = {
+        'xp': 0,
+        'level': 1,
+        'hearts': 5,
+        'max_hearts': 5,
+        'gems': 50,
+        'streak': 0,
+        'last_practice_date': None,
+        'completed_lessons': set(),
+        'current_lesson': None,
+        'current_question': 0,
+        'lesson_mistakes': 0,
+        'daily_xp': 0,
+        'daily_goal': 20,
+        'achievements_unlocked': set(),
+        'show_celebration': False,
+        'selected_answer': None,
+        'answer_submitted': False,
+        'page': 'home'
     }
-]
 
-# ============== MAIN APPLICATION ==============
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
-def main():
-    # Sidebar Navigation
-    st.sidebar.title("📚 Learning Hub")
+init_session_state()
 
-    page = st.sidebar.radio(
-        "Choose a Module:",
-        ["🏠 Home", "📊 Concept Visualizations", "📝 Quiz Zone", "🎴 Flashcards", "📖 Case Studies", "🔬 Brand Analysis Tool"]
-    )
+# ============== HELPER FUNCTIONS ==============
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📈 Your Progress")
+def calculate_level(xp):
+    """Calculate level based on XP (100 XP per level)"""
+    return (xp // 100) + 1
 
-    # Initialize session state for progress tracking
-    if 'quiz_score' not in st.session_state:
-        st.session_state.quiz_score = 0
-    if 'quizzes_attempted' not in st.session_state:
-        st.session_state.quizzes_attempted = 0
-    if 'flashcards_viewed' not in st.session_state:
-        st.session_state.flashcards_viewed = set()
+def xp_for_next_level(current_xp):
+    """Calculate XP needed for next level"""
+    current_level = calculate_level(current_xp)
+    next_level_xp = current_level * 100
+    return next_level_xp - current_xp
 
-    progress = len(st.session_state.flashcards_viewed) / len(FLASHCARDS)
-    st.sidebar.progress(progress)
-    st.sidebar.write(f"Flashcards: {len(st.session_state.flashcards_viewed)}/{len(FLASHCARDS)}")
+def xp_progress_percent(current_xp):
+    """Calculate progress percentage to next level"""
+    level = calculate_level(current_xp)
+    level_start = (level - 1) * 100
+    progress = current_xp - level_start
+    return (progress / 100) * 100
 
-    if st.session_state.quizzes_attempted > 0:
-        accuracy = (st.session_state.quiz_score / st.session_state.quizzes_attempted) * 100
-        st.sidebar.write(f"Quiz Accuracy: {accuracy:.0f}%")
+def check_streak():
+    """Check and update streak"""
+    today = datetime.now().date()
 
-    # Route to selected page
-    if page == "🏠 Home":
-        show_home()
-    elif page == "📊 Concept Visualizations":
-        show_visualizations()
-    elif page == "📝 Quiz Zone":
-        show_quiz()
-    elif page == "🎴 Flashcards":
-        show_flashcards()
-    elif page == "📖 Case Studies":
-        show_case_studies()
-    elif page == "🔬 Brand Analysis Tool":
-        show_brand_analysis()
+    if st.session_state.last_practice_date is None:
+        st.session_state.streak = 1
+        st.session_state.last_practice_date = today
+    elif st.session_state.last_practice_date == today:
+        pass  # Already practiced today
+    elif st.session_state.last_practice_date == today - timedelta(days=1):
+        st.session_state.streak += 1
+        st.session_state.last_practice_date = today
+    else:
+        st.session_state.streak = 1  # Streak broken
+        st.session_state.last_practice_date = today
 
-def show_home():
-    st.markdown('<div class="main-header">Consumer Behaviour Learning Hub</div>', unsafe_allow_html=True)
-    st.markdown("### Welcome to your interactive study companion for COBE201-1!")
+def add_xp(amount):
+    """Add XP and check for level up"""
+    old_level = calculate_level(st.session_state.xp)
+    st.session_state.xp += amount
+    st.session_state.daily_xp += amount
+    new_level = calculate_level(st.session_state.xp)
+
+    if new_level > old_level:
+        st.session_state.show_celebration = True
+        st.session_state.gems += 10  # Bonus gems on level up
+
+    check_achievements()
+
+def lose_heart():
+    """Lose a heart on wrong answer"""
+    if st.session_state.hearts > 0:
+        st.session_state.hearts -= 1
+
+def check_achievements():
+    """Check and unlock achievements"""
+    for ach in ACHIEVEMENTS:
+        if ach['id'] in st.session_state.achievements_unlocked:
+            continue
+
+        unlocked = False
+
+        if 'lessons_required' in ach and len(st.session_state.completed_lessons) >= ach['lessons_required']:
+            unlocked = True
+        elif 'xp_required' in ach and st.session_state.xp >= ach['xp_required']:
+            unlocked = True
+        elif 'streak_required' in ach and st.session_state.streak >= ach['streak_required']:
+            unlocked = True
+
+        if unlocked:
+            st.session_state.achievements_unlocked.add(ach['id'])
+            st.session_state.gems += 5
+
+def render_confetti():
+    """Render celebration confetti"""
+    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8']
+    confetti_html = '<div class="confetti">'
+    for i in range(50):
+        left = random.randint(0, 100)
+        delay = random.random() * 2
+        color = random.choice(colors)
+        confetti_html += f'<div class="confetti-piece" style="left: {left}%; animation-delay: {delay}s; background: {color};"></div>'
+    confetti_html += '</div>'
+    st.markdown(confetti_html, unsafe_allow_html=True)
+
+# ============== UI COMPONENTS ==============
+
+def render_stats_bar():
+    """Render top stats bar"""
+    col1, col2, col3, col4, col5 = st.columns([1, 1.5, 1, 1, 1])
+
+    with col1:
+        st.markdown(f"""
+        <div class="stat-item">
+            <span class="streak-fire">🔥</span>
+            <span>{st.session_state.streak}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        progress = xp_progress_percent(st.session_state.xp)
+        st.markdown(f"""
+        <div class="stat-item">
+            <span>⭐ Level {calculate_level(st.session_state.xp)}</span>
+            <div class="xp-container">
+                <div class="xp-fill" style="width: {progress}%;"></div>
+                <span class="xp-text">{int(progress)}%</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        hearts_display = "❤️" * st.session_state.hearts + "🖤" * (st.session_state.max_hearts - st.session_state.hearts)
+        st.markdown(f'<div class="hearts">{hearts_display}</div>', unsafe_allow_html=True)
+
+    with col4:
+        st.markdown(f"""
+        <div class="stat-item gems">
+            <span>💎 {st.session_state.gems}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col5:
+        st.markdown(f"""
+        <div class="stat-item">
+            <span>🎯 {st.session_state.daily_xp}/{st.session_state.daily_goal} XP</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_home():
+    """Render home/learning path page"""
+    st.markdown('<div class="mascot">🦉</div>', unsafe_allow_html=True)
+    st.markdown("<h1 style='color: white; text-align: center;'>ConsumerQuest</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #B0C4DE; text-align: center; font-size: 1.2rem;'>Master Consumer Behaviour - One lesson at a time!</p>", unsafe_allow_html=True)
+
+    # Daily goal progress
+    goal_progress = min(100, (st.session_state.daily_xp / st.session_state.daily_goal) * 100)
+    st.markdown(f"""
+    <div class="daily-goal">
+        <strong>🎯 Daily Goal: {st.session_state.daily_xp}/{st.session_state.daily_goal} XP</strong>
+        <div class="xp-container" style="width: 100%; margin-top: 10px;">
+            <div class="xp-fill" style="width: {goal_progress}%;"></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Render Units
+    for unit_id, unit in LESSONS.items():
+        st.markdown(f"""
+        <div class="unit-header">
+            <div class="unit-title">{unit['icon']} {unit['title']}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Render lessons in path
+        cols = st.columns(len(unit['lessons']))
+
+        for idx, lesson in enumerate(unit['lessons']):
+            with cols[idx]:
+                is_completed = lesson['id'] in st.session_state.completed_lessons
+
+                # Check if lesson is available (previous completed or first lesson)
+                is_available = idx == 0 or unit['lessons'][idx-1]['id'] in st.session_state.completed_lessons
+
+                if is_completed:
+                    status_class = "completed"
+                    crown = '<span class="crown">👑</span>'
+                elif is_available:
+                    status_class = "available"
+                    crown = ""
+                else:
+                    status_class = "locked"
+                    crown = ""
+
+                if is_available or is_completed:
+                    if st.button(f"{lesson['icon']}", key=f"lesson_{lesson['id']}", help=lesson['name']):
+                        st.session_state.current_lesson = lesson
+                        st.session_state.current_question = 0
+                        st.session_state.lesson_mistakes = 0
+                        st.session_state.selected_answer = None
+                        st.session_state.answer_submitted = False
+                        st.session_state.page = 'lesson'
+                        st.rerun()
+                else:
+                    st.button(f"🔒", key=f"locked_{lesson['id']}", disabled=True, help="Complete previous lesson first")
+
+                st.markdown(f"<p style='color: white; text-align: center; font-size: 0.9rem;'>{lesson['name']}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color: #FFC800; text-align: center; font-size: 0.8rem;'>+{lesson['xp']} XP</p>", unsafe_allow_html=True)
+
+def render_lesson():
+    """Render lesson/quiz page"""
+    lesson = st.session_state.current_lesson
+
+    if not lesson:
+        st.session_state.page = 'home'
+        st.rerun()
+        return
+
+    questions = lesson.get('questions', [])
+    q_idx = st.session_state.current_question
+
+    # Check if lesson complete
+    if q_idx >= len(questions):
+        render_lesson_complete()
+        return
+
+    question = questions[q_idx]
+
+    # Progress bar
+    progress = (q_idx / len(questions)) * 100
+    st.markdown(f"""
+    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
+        <button onclick="window.location.reload()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">✕</button>
+        <div class="xp-container" style="flex: 1;">
+            <div class="xp-fill" style="width: {progress}%; background: linear-gradient(90deg, #58CC02 0%, #46A302 100%);"></div>
+        </div>
+        <span class="hearts">{"❤️" * st.session_state.hearts}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Back button
+    if st.button("← Back", key="back_btn"):
+        st.session_state.page = 'home'
+        st.session_state.current_lesson = None
+        st.rerun()
+
+    st.markdown('<div class="main-card">', unsafe_allow_html=True)
+
+    # Render question based on type
+    if question['type'] == 'multiple_choice':
+        render_multiple_choice(question)
+    elif question['type'] == 'matching':
+        render_matching(question)
+    elif question['type'] == 'calculation':
+        render_calculation(question)
+    elif question['type'] == 'fill_blank':
+        render_fill_blank(question)
+    elif question['type'] == 'order':
+        render_ordering(question)
+    else:
+        render_multiple_choice(question)  # Default
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+def render_multiple_choice(question):
+    """Render multiple choice question"""
+    st.markdown(f'<div class="question-text">{question["question"]}</div>', unsafe_allow_html=True)
+
+    for idx, option in enumerate(question['options']):
+        is_selected = st.session_state.selected_answer == idx
+
+        if st.session_state.answer_submitted:
+            if idx == question['correct']:
+                btn_class = "correct"
+            elif is_selected:
+                btn_class = "incorrect"
+            else:
+                btn_class = ""
+        else:
+            btn_class = "selected" if is_selected else ""
+
+        if st.button(option, key=f"opt_{idx}", disabled=st.session_state.answer_submitted):
+            if not st.session_state.answer_submitted:
+                st.session_state.selected_answer = idx
+                st.rerun()
+
+    # Check button
+    if not st.session_state.answer_submitted:
+        if st.button("CHECK", key="check_btn", disabled=st.session_state.selected_answer is None):
+            st.session_state.answer_submitted = True
+            if st.session_state.selected_answer != question['correct']:
+                lose_heart()
+                st.session_state.lesson_mistakes += 1
+            st.rerun()
+    else:
+        # Show feedback
+        is_correct = st.session_state.selected_answer == question['correct']
+
+        if is_correct:
+            st.success(f"🎉 **Correct!** {question.get('explanation', '')}")
+        else:
+            st.error(f"❌ **Not quite!** {question.get('explanation', '')}")
+
+        if st.button("CONTINUE", key="continue_btn"):
+            st.session_state.current_question += 1
+            st.session_state.selected_answer = None
+            st.session_state.answer_submitted = False
+            st.rerun()
+
+def render_matching(question):
+    """Render matching question"""
+    st.markdown(f'<div class="question-text">{question["question"]}</div>', unsafe_allow_html=True)
+
+    pairs = question['pairs']
+
+    # Initialize matching state
+    if 'match_selections' not in st.session_state:
+        st.session_state.match_selections = {}
+    if 'matched_pairs' not in st.session_state:
+        st.session_state.matched_pairs = set()
+
+    # Check if all matched
+    all_matched = len(st.session_state.matched_pairs) == len(pairs)
+
+    if all_matched:
+        st.success("🎉 **All matched correctly!**")
+        if st.button("CONTINUE", key="continue_match"):
+            st.session_state.current_question += 1
+            st.session_state.match_selections = {}
+            st.session_state.matched_pairs = set()
+            st.rerun()
+    else:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**Terms:**")
+            for idx, pair in enumerate(pairs):
+                if idx not in st.session_state.matched_pairs:
+                    if st.button(pair['left'], key=f"left_{idx}"):
+                        st.session_state.match_selections['left'] = idx
+                        st.rerun()
+
+        with col2:
+            st.markdown("**Definitions:**")
+            shuffled_indices = list(range(len(pairs)))
+            random.seed(42)  # Consistent shuffle
+            random.shuffle(shuffled_indices)
+
+            for idx in shuffled_indices:
+                pair = pairs[idx]
+                if idx not in st.session_state.matched_pairs:
+                    if st.button(pair['right'], key=f"right_{idx}"):
+                        if 'left' in st.session_state.match_selections:
+                            left_idx = st.session_state.match_selections['left']
+                            if left_idx == idx:  # Correct match
+                                st.session_state.matched_pairs.add(idx)
+                            else:
+                                lose_heart()
+                                st.session_state.lesson_mistakes += 1
+                            st.session_state.match_selections = {}
+                            st.rerun()
+
+def render_calculation(question):
+    """Render calculation question"""
+    st.markdown(f'<div class="question-text">{question["question"]}</div>', unsafe_allow_html=True)
+
+    st.info(f"💡 Formula: {question['formula']}")
+
+    answer = st.number_input("Your answer:", key="calc_answer", step=1)
+
+    if st.button("CHECK", key="check_calc"):
+        if int(answer) == question['answer']:
+            st.success(f"🎉 **Correct!** {question['answer']}{question.get('unit', '')} - {question.get('explanation', '')}")
+            if st.button("CONTINUE", key="continue_calc"):
+                st.session_state.current_question += 1
+                st.rerun()
+        else:
+            st.error(f"❌ The correct answer is {question['answer']}{question.get('unit', '')}. {question.get('explanation', '')}")
+            lose_heart()
+            st.session_state.lesson_mistakes += 1
+            if st.button("CONTINUE", key="continue_calc_wrong"):
+                st.session_state.current_question += 1
+                st.rerun()
+
+def render_fill_blank(question):
+    """Render fill in the blank question"""
+    st.markdown(f'<div class="question-text">{question["question"]}</div>', unsafe_allow_html=True)
+
+    if 'hint' in question:
+        st.info(f"💡 Hint: {question['hint']}")
+
+    user_answers = []
+    for idx, _ in enumerate(question['answer']):
+        ans = st.text_input(f"Blank {idx+1}:", key=f"blank_{idx}")
+        user_answers.append(ans.lower().strip())
+
+    if st.button("CHECK", key="check_fill"):
+        correct_answers = [a.lower() for a in question['answer']]
+        if user_answers == correct_answers:
+            st.success("🎉 **Correct!**")
+        else:
+            st.error(f"❌ The correct answers are: {', '.join(question['answer'])}")
+            lose_heart()
+            st.session_state.lesson_mistakes += 1
+
+        if st.button("CONTINUE", key="continue_fill"):
+            st.session_state.current_question += 1
+            st.rerun()
+
+def render_ordering(question):
+    """Render ordering question"""
+    st.markdown(f'<div class="question-text">{question["question"]}</div>', unsafe_allow_html=True)
+
+    items = question['items']
+
+    st.markdown("**Drag to reorder (use numbers 1-5):**")
+
+    order = []
+    for idx, item in enumerate(items):
+        pos = st.selectbox(f"{item}", options=list(range(1, len(items)+1)), key=f"order_{idx}")
+        order.append(pos)
+
+    if st.button("CHECK", key="check_order"):
+        # Check if order is 1,2,3,4,5
+        if order == list(range(1, len(items)+1)):
+            st.success("🎉 **Correct order!**")
+        else:
+            st.error("❌ Not quite right. The correct order is shown above.")
+            lose_heart()
+            st.session_state.lesson_mistakes += 1
+
+        if st.button("CONTINUE", key="continue_order"):
+            st.session_state.current_question += 1
+            st.rerun()
+
+def render_lesson_complete():
+    """Render lesson completion screen"""
+    lesson = st.session_state.current_lesson
+
+    # Add XP
+    xp_earned = lesson['xp']
+    if st.session_state.lesson_mistakes == 0:
+        xp_earned += 5  # Bonus for perfect lesson
+
+    st.markdown('<div class="main-card" style="text-align: center;">', unsafe_allow_html=True)
+
+    # Celebration animation
+    render_confetti()
+
+    st.markdown('<div class="mascot">🎉</div>', unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #58CC02;'>Lesson Complete!</h1>", unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("XP Earned", f"+{xp_earned}")
+    with col2:
+        st.metric("Mistakes", st.session_state.lesson_mistakes)
+    with col3:
+        accuracy = max(0, 100 - (st.session_state.lesson_mistakes * 20))
+        st.metric("Accuracy", f"{accuracy}%")
+
+    if st.session_state.lesson_mistakes == 0:
+        st.success("🌟 **PERFECT!** No mistakes!")
+
+    # Mark lesson as complete and add XP
+    if lesson['id'] not in st.session_state.completed_lessons:
+        st.session_state.completed_lessons.add(lesson['id'])
+        add_xp(xp_earned)
+        check_streak()
+
+    if st.button("CONTINUE", key="finish_lesson"):
+        st.session_state.page = 'home'
+        st.session_state.current_lesson = None
+        st.session_state.current_question = 0
+        st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+def render_achievements():
+    """Render achievements page"""
+    st.markdown("<h1 style='color: white; text-align: center;'>🏆 Achievements</h1>", unsafe_allow_html=True)
+
+    st.markdown('<div class="main-card">', unsafe_allow_html=True)
+
+    cols = st.columns(4)
+
+    for idx, ach in enumerate(ACHIEVEMENTS):
+        with cols[idx % 4]:
+            is_unlocked = ach['id'] in st.session_state.achievements_unlocked
+            badge_class = "" if is_unlocked else "locked"
+
+            st.markdown(f"""
+            <div class="badge {badge_class}">
+                <span class="badge-icon">{ach['icon'] if is_unlocked else '🔒'}</span>
+                <span class="badge-name">{ach['name']}</span>
+            </div>
+            <p style="text-align: center; font-size: 0.8rem; color: #666;">{ach['desc']}</p>
+            """, unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+def render_profile():
+    """Render profile/stats page"""
+    st.markdown("<h1 style='color: white; text-align: center;'>📊 Your Stats</h1>", unsafe_allow_html=True)
+
+    st.markdown('<div class="main-card">', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("#### 📚 Unit 1: Fundamentals")
-        st.markdown("""
-        - What is Consumer Behaviour?
-        - The 5-Stage Decision-Making Process
-        - 4 Types of Buying Behaviour
-        - Customer Types & Classifications
-        """)
+        st.markdown(f"""
+        <div style="text-align: center; padding: 20px;">
+            <div class="mascot">🦉</div>
+            <h2>Level {calculate_level(st.session_state.xp)}</h2>
+            <div class="level-badge">Consumer Apprentice</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown("#### 📈 Unit 2: Strategy")
-        st.markdown("""
-        - STP: Segmentation, Targeting, Positioning
-        - Market Segmentation Types
-        - Brand Positioning & Perceptual Maps
-        - Customer Retention & Churn Rate
-        """)
+        st.metric("Total XP", st.session_state.xp)
+        st.metric("Current Streak", f"🔥 {st.session_state.streak} days")
+        st.metric("Lessons Completed", len(st.session_state.completed_lessons))
+        st.metric("Gems", f"💎 {st.session_state.gems}")
+
+    # Daily goal setting
+    st.markdown("---")
+    st.markdown("### 🎯 Set Daily Goal")
+    new_goal = st.select_slider("Daily XP Goal:", options=DAILY_GOALS, value=st.session_state.daily_goal)
+    if new_goal != st.session_state.daily_goal:
+        st.session_state.daily_goal = new_goal
+        st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ============== MAIN APP ==============
+
+def main():
+    # Render stats bar
+    render_stats_bar()
+
+    # Navigation
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        if st.button("🏠 Learn", use_container_width=True):
+            st.session_state.page = 'home'
+            st.rerun()
+    with col2:
+        if st.button("🏆 Achievements", use_container_width=True):
+            st.session_state.page = 'achievements'
+            st.rerun()
+    with col3:
+        if st.button("👤 Profile", use_container_width=True):
+            st.session_state.page = 'profile'
+            st.rerun()
+    with col4:
+        if st.button("🔄 Reset", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
 
     st.markdown("---")
-    st.markdown("### 🚀 Quick Start Guide")
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.info("**📊 Visualizations**\nInteractive diagrams of key concepts")
-    with col2:
-        st.success("**📝 Quiz Zone**\nTest your understanding")
-    with col3:
-        st.warning("**🎴 Flashcards**\nMemorize key definitions")
-
-def show_visualizations():
-    st.markdown("## 📊 Concept Visualizations")
-
-    viz_type = st.selectbox(
-        "Choose a concept to explore:",
-        ["Decision-Making Process", "Buying Behaviour Matrix", "STP Framework", "Customer Retention"]
-    )
-
-    if viz_type == "Decision-Making Process":
-        st.markdown("### 🧠 The 5-Stage Decision-Making Process")
-        st.markdown("*Click on each stage to learn more*")
-
-        cols = st.columns(5)
-        for i, step in enumerate(DECISION_PROCESS):
-            with cols[i]:
-                with st.expander(f"{step['icon']} {step['step']}"):
-                    st.markdown(f"**{step['name']}**")
-                    st.write(step['description'])
-                    st.info(f"Example: {step['example']}")
-
-        # Visual flow
-        st.markdown("---")
-        flow = " → ".join([f"{s['icon']} {s['name']}" for s in DECISION_PROCESS])
-        st.markdown(f"### Flow: {flow}")
-
-    elif viz_type == "Buying Behaviour Matrix":
-        st.markdown("### 🎯 4 Types of Buying Behaviour")
-        st.markdown("*Based on Involvement Level and Brand Differences*")
-
-        # Create 2x2 matrix
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown("#### High Involvement")
-            for bb in BUYING_BEHAVIOURS:
-                if bb['involvement'] == 'High':
-                    st.markdown(f"""
-                    <div style="background: {bb['color']}20; padding: 1rem; border-radius: 10px; border-left: 4px solid {bb['color']}; margin: 0.5rem 0;">
-                        <strong>{bb['type']}</strong><br>
-                        Brand Differences: {bb['brand_diff']}<br>
-                        Examples: {', '.join(bb['examples'])}<br>
-                        <em>{bb['characteristics']}</em>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-        with col2:
-            st.markdown("#### Low Involvement")
-            for bb in BUYING_BEHAVIOURS:
-                if bb['involvement'] == 'Low':
-                    st.markdown(f"""
-                    <div style="background: {bb['color']}20; padding: 1rem; border-radius: 10px; border-left: 4px solid {bb['color']}; margin: 0.5rem 0;">
-                        <strong>{bb['type']}</strong><br>
-                        Brand Differences: {bb['brand_diff']}<br>
-                        Examples: {', '.join(bb['examples'])}<br>
-                        <em>{bb['characteristics']}</em>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-    elif viz_type == "STP Framework":
-        st.markdown("### 🎯 STP: Segmentation, Targeting, Positioning")
-
-        tab1, tab2, tab3 = st.tabs(["Segmentation", "Targeting", "Positioning"])
-
-        with tab1:
-            st.markdown("#### Market Segmentation Types")
-            seg_types = {
-                "Geographic": {"icon": "🌍", "bases": ["Country", "Region", "City", "Climate"], "example": "McDonald's menu varies by country"},
-                "Demographic": {"icon": "👥", "bases": ["Age", "Gender", "Income", "Education"], "example": "Johnson's Baby targets parents of infants"},
-                "Psychographic": {"icon": "🧠", "bases": ["Lifestyle", "Values", "Personality", "Social Class"], "example": "Harley-Davidson targets freedom-seekers"},
-                "Behavioural": {"icon": "🛒", "bases": ["Usage Rate", "Loyalty", "Benefits Sought", "Occasion"], "example": "Airlines reward frequent flyers"}
-            }
-
-            for seg_name, seg_data in seg_types.items():
-                with st.expander(f"{seg_data['icon']} {seg_name} Segmentation"):
-                    st.write(f"**Bases:** {', '.join(seg_data['bases'])}")
-                    st.info(f"Example: {seg_data['example']}")
-
-        with tab2:
-            st.markdown("#### Targeting Strategies")
-            st.markdown("""
-            | Strategy | Description | Example |
-            |----------|-------------|---------|
-            | Undifferentiated | Same offer to all | Coca-Cola (classic) |
-            | Differentiated | Different offers to segments | Toyota (Corolla, Camry, Lexus) |
-            | Concentrated | Focus on one segment | Rolex (luxury segment) |
-            | Micromarketing | Individual customization | Nike ID (custom shoes) |
-            """)
-
-        with tab3:
-            st.markdown("#### Brand Positioning")
-            st.markdown("A perceptual map shows how consumers view brands:")
-
-            st.markdown("""
-            ```
-                        HIGH QUALITY
-                             |
-                    Rolex    |    Tag Heuer
-                             |
-            HIGH PRICE ------+------ LOW PRICE
-                             |
-                    Fossil   |    Casio
-                             |
-                        LOW QUALITY
-            ```
-            """)
-
-    elif viz_type == "Customer Retention":
-        st.markdown("### 📊 Customer Retention & Churn Rate")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown("#### Retention Rate Formula")
-            st.latex(r"Retention\,Rate = \frac{(CE - CN)}{CS} \times 100")
-            st.markdown("""
-            Where:
-            - **CE** = Customers at End
-            - **CN** = New Customers acquired
-            - **CS** = Customers at Start
-            """)
-
-        with col2:
-            st.markdown("#### Churn Rate Formula")
-            st.latex(r"Churn\,Rate = \frac{Lost\,Customers}{Total\,Customers\,at\,Start} \times 100")
-            st.info("Churn Rate = 100% - Retention Rate")
-
-        st.markdown("---")
-        st.markdown("### 🧮 Practice Calculator")
-
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            cs = st.number_input("Customers at Start (CS)", min_value=1, value=1000)
-        with col2:
-            cn = st.number_input("New Customers (CN)", min_value=0, value=200)
-        with col3:
-            ce = st.number_input("Customers at End (CE)", min_value=0, value=900)
-
-        if st.button("Calculate Rates"):
-            retention = ((ce - cn) / cs) * 100
-            churn = 100 - retention
-
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Retention Rate", f"{retention:.1f}%")
-            with col2:
-                st.metric("Churn Rate", f"{churn:.1f}%")
-
-def show_quiz():
-    st.markdown("## 📝 Quiz Zone")
-
-    if 'current_question' not in st.session_state:
-        st.session_state.current_question = 0
-    if 'quiz_answers' not in st.session_state:
-        st.session_state.quiz_answers = {}
-    if 'show_results' not in st.session_state:
-        st.session_state.show_results = False
-
-    if st.button("🔄 Start New Quiz"):
-        st.session_state.current_question = 0
-        st.session_state.quiz_answers = {}
-        st.session_state.show_results = False
-        st.rerun()
-
-    if not st.session_state.show_results:
-        q_idx = st.session_state.current_question
-
-        if q_idx < len(QUIZ_QUESTIONS):
-            question = QUIZ_QUESTIONS[q_idx]
-
-            st.progress((q_idx + 1) / len(QUIZ_QUESTIONS))
-            st.markdown(f"**Question {q_idx + 1} of {len(QUIZ_QUESTIONS)}**")
-
-            st.markdown(f"### {question['question']}")
-
-            answer = st.radio(
-                "Select your answer:",
-                question['options'],
-                key=f"q_{q_idx}"
-            )
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                if st.button("Submit Answer"):
-                    selected_idx = question['options'].index(answer)
-                    is_correct = selected_idx == question['correct']
-
-                    st.session_state.quiz_answers[q_idx] = {
-                        'selected': selected_idx,
-                        'correct': question['correct'],
-                        'is_correct': is_correct
-                    }
-
-                    st.session_state.quizzes_attempted += 1
-                    if is_correct:
-                        st.session_state.quiz_score += 1
-
-                    if is_correct:
-                        st.markdown('<div class="quiz-correct">✅ Correct!</div>', unsafe_allow_html=True)
-                    else:
-                        st.markdown(f'<div class="quiz-incorrect">❌ Incorrect. The correct answer is: {question["options"][question["correct"]]}</div>', unsafe_allow_html=True)
-
-                    st.info(f"💡 {question['explanation']}")
-
-            with col2:
-                if q_idx in st.session_state.quiz_answers:
-                    if q_idx < len(QUIZ_QUESTIONS) - 1:
-                        if st.button("Next Question →"):
-                            st.session_state.current_question += 1
-                            st.rerun()
-                    else:
-                        if st.button("See Results 📊"):
-                            st.session_state.show_results = True
-                            st.rerun()
-
-    else:
-        # Show results
-        st.markdown("### 🎉 Quiz Complete!")
-
-        correct_count = sum(1 for a in st.session_state.quiz_answers.values() if a['is_correct'])
-        total = len(st.session_state.quiz_answers)
-        percentage = (correct_count / total) * 100
-
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Score", f"{correct_count}/{total}")
-        with col2:
-            st.metric("Percentage", f"{percentage:.0f}%")
-        with col3:
-            if percentage >= 80:
-                st.success("🌟 Excellent!")
-            elif percentage >= 60:
-                st.info("👍 Good job!")
-            else:
-                st.warning("📚 Keep studying!")
-
-def show_flashcards():
-    st.markdown("## 🎴 Flashcards")
-    st.markdown("*Click 'Flip' to reveal the definition*")
-
-    if 'current_card' not in st.session_state:
-        st.session_state.current_card = 0
-    if 'card_flipped' not in st.session_state:
-        st.session_state.card_flipped = False
-
-    card = FLASHCARDS[st.session_state.current_card]
-
-    st.progress((st.session_state.current_card + 1) / len(FLASHCARDS))
-    st.write(f"Card {st.session_state.current_card + 1} of {len(FLASHCARDS)}")
-
-    # Display card
-    if not st.session_state.card_flipped:
-        st.markdown(f"""
-        <div class="flashcard">
-            <h2>{card['term']}</h2>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-        <div class="flashcard" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-            <div>
-                <h3>{card['term']}</h3>
-                <p>{card['definition']}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        st.session_state.flashcards_viewed.add(st.session_state.current_card)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        if st.button("⬅️ Previous"):
-            st.session_state.current_card = (st.session_state.current_card - 1) % len(FLASHCARDS)
-            st.session_state.card_flipped = False
-            st.rerun()
-
-    with col2:
-        if st.button("🔄 Flip Card"):
-            st.session_state.card_flipped = not st.session_state.card_flipped
-            st.rerun()
-
-    with col3:
-        if st.button("Next ➡️"):
-            st.session_state.current_card = (st.session_state.current_card + 1) % len(FLASHCARDS)
-            st.session_state.card_flipped = False
-            st.rerun()
-
-    if st.button("🎲 Random Card"):
-        st.session_state.current_card = random.randint(0, len(FLASHCARDS) - 1)
-        st.session_state.card_flipped = False
-        st.rerun()
-
-def show_case_studies():
-    st.markdown("## 📖 Case Studies")
-    st.markdown("*Real-world applications of consumer behaviour concepts*")
-
-    for i, case in enumerate(CASE_STUDIES):
-        with st.expander(f"📌 Case {i+1}: {case['title']}"):
-            st.markdown("#### Scenario")
-            st.markdown(case['scenario'])
-
-            st.markdown("---")
-            st.markdown("#### Analysis Questions")
-
-            for j, q in enumerate(case['questions']):
-                st.markdown(f"**Q{j+1}: {q['q']}**")
-
-                answer = st.radio(
-                    f"Select answer:",
-                    q['options'],
-                    key=f"case_{i}_q_{j}"
-                )
-
-                if st.button(f"Check Answer", key=f"check_{i}_{j}"):
-                    selected_idx = q['options'].index(answer)
-                    if selected_idx == q['correct']:
-                        st.success(f"✅ Correct! {q['explanation']}")
-                    else:
-                        st.error(f"❌ The correct answer is: {q['options'][q['correct']]}")
-                        st.info(q['explanation'])
-
-                st.markdown("---")
-
-def show_brand_analysis():
-    st.markdown("## 🔬 Brand Analysis Tool")
-    st.markdown("*Analyze any brand using consumer behaviour frameworks*")
-
-    brand_name = st.text_input("Enter a brand name to analyze:", placeholder="e.g., Nike, Apple, Zomato")
-
-    if brand_name:
-        st.markdown(f"### Analyzing: {brand_name}")
-
-        tab1, tab2, tab3 = st.tabs(["Segmentation Analysis", "Buying Behaviour", "Positioning"])
-
-        with tab1:
-            st.markdown("#### How does this brand segment its market?")
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                geo = st.multiselect("Geographic factors:", ["Global", "National", "Regional", "Urban", "Rural"])
-                demo = st.multiselect("Demographic targets:", ["Youth (18-25)", "Adults (26-45)", "Seniors (45+)", "Families", "Singles"])
-
-            with col2:
-                psycho = st.multiselect("Psychographic appeals:", ["Aspirational", "Value-conscious", "Health-focused", "Trendy", "Traditional"])
-                behav = st.multiselect("Behavioural focus:", ["Heavy users", "First-time buyers", "Brand loyalists", "Switchers"])
-
-            if st.button("Generate Segmentation Summary"):
-                st.success(f"""
-                **{brand_name} Segmentation Profile:**
-                - **Geographic:** {', '.join(geo) if geo else 'Not specified'}
-                - **Demographic:** {', '.join(demo) if demo else 'Not specified'}
-                - **Psychographic:** {', '.join(psycho) if psycho else 'Not specified'}
-                - **Behavioural:** {', '.join(behav) if behav else 'Not specified'}
-                """)
-
-        with tab2:
-            st.markdown("#### What type of buying behaviour applies?")
-
-            involvement = st.slider("Customer Involvement Level", 1, 10, 5)
-            brand_diff = st.slider("Brand Differentiation", 1, 10, 5)
-
-            if involvement > 5 and brand_diff > 5:
-                behaviour = "Complex Buying Behaviour"
-                color = "#EF4444"
-            elif involvement > 5 and brand_diff <= 5:
-                behaviour = "Dissonance-Reducing Behaviour"
-                color = "#F59E0B"
-            elif involvement <= 5 and brand_diff > 5:
-                behaviour = "Variety-Seeking Behaviour"
-                color = "#10B981"
-            else:
-                behaviour = "Habitual Buying Behaviour"
-                color = "#3B82F6"
-
-            st.markdown(f"""
-            <div style="background: {color}20; padding: 1.5rem; border-radius: 10px; border-left: 5px solid {color};">
-                <h3 style="color: {color};">{behaviour}</h3>
-                <p>Based on {'high' if involvement > 5 else 'low'} involvement and {'significant' if brand_diff > 5 else 'few'} brand differences.</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with tab3:
-            st.markdown("#### Brand Positioning")
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                price_pos = st.select_slider(
-                    "Price Positioning",
-                    options=["Budget", "Value", "Mid-range", "Premium", "Luxury"]
-                )
-
-            with col2:
-                quality_pos = st.select_slider(
-                    "Quality Positioning",
-                    options=["Basic", "Standard", "Good", "Superior", "Excellence"]
-                )
-
-            differentiators = st.text_area("Key brand differentiators:", placeholder="What makes this brand unique?")
-
-            if st.button("Create Positioning Statement"):
-                st.info(f"""
-                **{brand_name} Positioning Statement:**
-
-                For customers seeking {quality_pos.lower()} quality at {price_pos.lower()} price points,
-                {brand_name} is the brand that {differentiators if differentiators else 'delivers exceptional value'}.
-                """)
+    # Render current page
+    if st.session_state.page == 'home':
+        render_home()
+    elif st.session_state.page == 'lesson':
+        render_lesson()
+    elif st.session_state.page == 'achievements':
+        render_achievements()
+    elif st.session_state.page == 'profile':
+        render_profile()
+
+    # Show celebration modal
+    if st.session_state.show_celebration:
+        st.balloons()
+        st.session_state.show_celebration = False
 
 if __name__ == "__main__":
     main()
