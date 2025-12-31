@@ -689,25 +689,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Floating particles background
+# Floating particles background - rendered via CSS only (no dynamic HTML)
 def render_particles():
-    particles_html = '<div class="particles">'
-    for i in range(30):
+    # Use CSS-only particles to avoid HTML rendering issues
+    particle_css = '<style>.particles-bg{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden;}'
+    for i in range(20):
         left = random.randint(0, 100)
-        delay = random.random() * 20
-        duration = 15 + random.random() * 10
-        size = 2 + random.random() * 4
-        particles_html += f'''
-        <div class="particle" style="
-            left: {left}%;
-            animation-delay: {delay}s;
-            animation-duration: {duration}s;
-            width: {size}px;
-            height: {size}px;
-        "></div>
-        '''
-    particles_html += '</div>'
-    st.markdown(particles_html, unsafe_allow_html=True)
+        delay = round(random.random() * 15, 1)
+        duration = round(15 + random.random() * 10, 1)
+        particle_css += f'.p{i}{{position:absolute;left:{left}%;width:4px;height:4px;background:#00f5ff;border-radius:50%;opacity:0.4;box-shadow:0 0 10px #00f5ff;animation:float-p {duration}s {delay}s infinite linear;}}'
+    particle_css += '@keyframes float-p{0%{transform:translateY(100vh);opacity:0;}10%{opacity:0.4;}90%{opacity:0.4;}100%{transform:translateY(-100vh);opacity:0;}}</style>'
+    particle_divs = '<div class="particles-bg">' + ''.join([f'<div class="p{i}"></div>' for i in range(20)]) + '</div>'
+    st.markdown(particle_css + particle_divs, unsafe_allow_html=True)
 
 # ============== DATA ==============
 
