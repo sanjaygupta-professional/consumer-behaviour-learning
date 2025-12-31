@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConsumerQuest | Learn Consumer Behaviour</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter Tight', sans-serif;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 3D Canvas Background */
+        #three-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Main Container */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50px;
+            padding: 12px 24px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(0,245,255,0.1);
+            border-color: rgba(0,245,255,0.5);
+            box-shadow: 0 0 30px rgba(0,245,255,0.3);
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .hero-title {
+            font-size: clamp(40px, 8vw, 80px);
+            font-weight: 800;
+            background: linear-gradient(135deg, #00f5ff, #7b68ee, #ff6ec7, #00f5ff);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 8s ease infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50px;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-icon { font-size: 20px; }
+        .stat-value { font-weight: 700; }
+
+        /* Progress Bar */
+        .progress-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            height: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f5ff, #7b68ee, #ff6ec7);
+            background-size: 200% 200%;
+            animation: gradient 4s ease infinite;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        /* Unit Section */
+        .unit {
+            background: linear-gradient(135deg, rgba(0,245,255,0.08), rgba(123,104,238,0.08));
+            border: 1px solid rgba(0,245,255,0.2);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .unit-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Lesson Grid */
+        .lessons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .lesson-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .lesson-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0,245,255,0.5);
+            box-shadow: 0 20px 40px rgba(0,245,255,0.2);
+        }
+
+        .lesson-card.completed {
+            border-color: rgba(0,245,255,0.8);
+            background: rgba(0,245,255,0.1);
+        }
+
+        .lesson-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .lesson-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .lesson-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .lesson-xp {
+            color: #00f5ff;
+            font-size: 14px;
+        }
+
+        /* Question Screen */
+        .question-screen {
+            display: none;
+        }
+
+        .question-screen.active {
+            display: block;
+        }
+
+        .question-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 10px 20px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(0,245,255,0.1);
+        }
+
+        .hearts {
+            margin-left: auto;
+            font-size: 24px;
+        }
+
+        .question-box {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+
+        .question-text {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option {
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 18px 24px;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .option:hover {
+            border-color: rgba(0,245,255,0.5);
+            transform: translateX(10px);
+        }
+
+        .option.selected {
+            border-color: #00f5ff;
+            background: rgba(0,245,255,0.1);
+        }
+
+        .option.correct {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.1);
+        }
+
+        .option.incorrect {
+            border-color: #ff4d6d;
+            background: rgba(255,77,109,0.1);
+        }
+
+        .check-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #00f5ff, #7b68ee);
+            border: none;
+            border-radius: 12px;
+            padding: 18px;
+            color: #000;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .check-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(0,245,255,0.4);
+        }
+
+        .check-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Feedback */
+        .feedback {
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .feedback.show { display: block; }
+
+        .feedback.correct {
+            background: rgba(0,255,136,0.1);
+            border: 1px solid rgba(0,255,136,0.3);
+            color: #00ff88;
+        }
+
+        .feedback.incorrect {
+            background: rgba(255,77,109,0.1);
+            border: 1px solid rgba(255,77,109,0.3);
+            color: #ff4d6d;
+        }
+
+        .feedback-title {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        /* Celebration Screen */
+        .celebration {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .celebration-icon {
+            font-size: 80px;
+            animation: bounce 0.6s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .celebration-title {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00f5ff, #7b68ee, #ff6ec7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .stat-card-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #00f5ff;
+        }
+
+        .stat-card-label {
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+        }
+
+        /* Content Panel */
+        .content-panel {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .content-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #00f5ff;
+        }
+
+        .content-text {
+            line-height: 1.8;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .content-text ul {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+
+        .content-text li {
+            margin: 10px 0;
+        }
+
+        .example-box {
+            background: rgba(0,245,255,0.05);
+            border-left: 3px solid #00f5ff;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-term {
+            color: #ff6ec7;
+            font-weight: 600;
+        }
+
+        /* Hidden screens */
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        /* Sound toggle */
+        .sound-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .sound-toggle:hover {
+            background: rgba(0,245,255,0.2);
+            border-color: rgba(0,245,255,0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .question-text { font-size: 18px; }
+            .hero-title { font-size: 36px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Three.js Canvas -->
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Sound Toggle -->
+    <div class="sound-toggle" onclick="toggleSound()">🔊</div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-btn active" onclick="showScreen('home')">🧊 Learn</button>
+            <button class="nav-btn" onclick="showScreen('achievements')">🏆 Achievements</button>
+            <button class="nav-btn" onclick="showScreen('profile')">👤 Profile</button>
+        </nav>
+
+        <!-- HOME SCREEN -->
+        <div id="home-screen" class="screen active">
+            <div class="hero">
+                <h1 class="hero-title">ConsumerQuest</h1>
+                <p class="hero-subtitle">Master Consumer Behaviour</p>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat"><span class="stat-icon">🔥</span><span class="stat-value" id="streak">1</span> Streak</div>
+                <div class="stat"><span class="stat-icon">⭐</span>Level <span class="stat-value" id="level">1</span></div>
+                <div class="stat"><span class="stat-icon">❤️</span><span class="stat-value" id="hearts">5</span> Hearts</div>
+                <div class="stat"><span class="stat-icon">💎</span><span class="stat-value" id="gems">50</span> Gems</div>
+            </div>
+
+            <div style="text-align:center;color:rgba(255,255,255,0.6);">🎯 Daily Goal: <span id="daily-xp">0</span>/30 XP</div>
+            <div class="progress-container">
+                <div class="progress-fill" id="daily-progress" style="width:0%;"></div>
+            </div>
+
+            <!-- Unit 1 -->
+            <div class="unit">
+                <h2 class="unit-title">🧠 Unit 1: Consumer Behaviour Fundamentals</h2>
+                <div class="lessons-grid" id="unit1-lessons"></div>
+            </div>
+
+            <!-- Unit 2 -->
+            <div class="unit">
+                <h2 class="unit-title">🎯 Unit 2: STP Marketing Strategy</h2>
+                <div class="lessons-grid" id="unit2-lessons"></div>
+            </div>
+        </div>
+
+        <!-- LESSON SCREEN -->
+        <div id="lesson-screen" class="screen">
+            <!-- Content will be injected here -->
+        </div>
+
+        <!-- ACHIEVEMENTS SCREEN -->
+        <div id="achievements-screen" class="screen">
+            <div class="hero">
+                <h1 class="hero-title" style="font-size:40px;">🏆 Achievements</h1>
+            </div>
+            <div class="lessons-grid" id="achievements-grid"></div>
+        </div>
+
+        <!-- PROFILE SCREEN -->
+        <div id="profile-screen" class="screen">
+            <div class="hero">
+                <h1 class="hero-title" style="font-size:48px;">Level <span id="profile-level">1</span></h1>
+                <p class="hero-subtitle">Consumer Apprentice</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-value" id="total-xp">0</div>
+                    <div class="stat-card-label">Total XP</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-value" id="total-lessons">0</div>
+                    <div class="stat-card-label">Lessons Done</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-value" id="total-gems">50</div>
+                    <div class="stat-card-label">Gems</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== GAME STATE ====================
+        let state = {
+            xp: 0,
+            hearts: 5,
+            streak: 1,
+            gems: 50,
+            dailyXp: 0,
+            completedLessons: new Set(),
+            achievements: new Set(),
+            currentLesson: null,
+            currentQuestion: 0,
+            mistakes: 0,
+            selectedAnswer: null,
+            soundEnabled: true
+        };
+
+        // Load state from localStorage
+        function loadState() {
+            const saved = localStorage.getItem('consumerquest');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state = {
+                    ...state,
+                    ...parsed,
+                    completedLessons: new Set(parsed.completedLessons || []),
+                    achievements: new Set(parsed.achievements || [])
+                };
+            }
+        }
+
+        function saveState() {
+            const toSave = {
+                ...state,
+                completedLessons: [...state.completedLessons],
+                achievements: [...state.achievements]
+            };
+            localStorage.setItem('consumerquest', JSON.stringify(toSave));
+        }
+
+        // ==================== SOUND EFFECTS ====================
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (!state.soundEnabled) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            if (type === 'correct') {
+                oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+                oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+                oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.4);
+            } else if (type === 'incorrect') {
+                oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } else if (type === 'click') {
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.05);
+            } else if (type === 'complete') {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, i) => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    osc.frequency.setValueAtTime(freq, audioContext.currentTime + i * 0.15);
+                    gain.gain.setValueAtTime(0.2, audioContext.currentTime + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.15 + 0.3);
+                    osc.start(audioContext.currentTime + i * 0.15);
+                    osc.stop(audioContext.currentTime + i * 0.15 + 0.3);
+                });
+            }
+        }
+
+        function toggleSound() {
+            state.soundEnabled = !state.soundEnabled;
+            document.querySelector('.sound-toggle').textContent = state.soundEnabled ? '🔊' : '🔇';
+            if (state.soundEnabled) playSound('click');
+        }
+
+        // ==================== LESSON DATA ====================
+        const lessons = {
+            "1.1": {
+                id: "1.1",
+                name: "What is Consumer Behaviour?",
+                icon: "📚",
+                xp: 20,
+                content: `
+                    <div class="content-panel">
+                        <h3 class="content-title">📖 What is Consumer Behaviour?</h3>
+                        <div class="content-text">
+                            <p><span class="key-term">Consumer Behaviour</span> is the study of how individuals, groups, and organizations select, buy, use, and dispose of goods, services, ideas, or experiences to satisfy their needs and wants.</p>
+
+                            <div class="example-box">
+                                <strong>Example:</strong> When Priya decides to buy a new smartphone, consumer behaviour studies why she chose iPhone over Samsung, how she researched options, who influenced her decision, and how she feels after the purchase.
+                            </div>
+
+                            <h4 style="margin-top:20px;color:#7b68ee;">Key Components:</h4>
+                            <ul>
+                                <li><strong>Selection:</strong> How consumers choose between alternatives</li>
+                                <li><strong>Purchase:</strong> The actual buying decision and transaction</li>
+                                <li><strong>Usage:</strong> How products are consumed or used</li>
+                                <li><strong>Disposal:</strong> What happens to products after use (recycle, resell, discard)</li>
+                            </ul>
+
+                            <h4 style="margin-top:20px;color:#7b68ee;">Why It Matters for Marketing:</h4>
+                            <ul>
+                                <li>Helps identify customer needs and wants</li>
+                                <li>Enables better product development</li>
+                                <li>Improves marketing communication</li>
+                                <li>Increases customer satisfaction and loyalty</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    {
+                        question: "Consumer Behaviour is the study of how people...",
+                        options: ["Manufacture products in factories", "Select, buy, use, and dispose of products", "Design marketing campaigns", "Set product prices"],
+                        correct: 1,
+                        explanation: "Consumer Behaviour focuses on the entire journey - from selecting products to disposing of them. It's about understanding the 'why' behind consumer decisions."
+                    },
+                    {
+                        question: "Which of the following is NOT a component of consumer behaviour?",
+                        options: ["Product selection", "Purchase decision", "Factory manufacturing", "Product disposal"],
+                        correct: 2,
+                        explanation: "Factory manufacturing is part of operations/production management, not consumer behaviour. Consumer behaviour focuses on the buyer's journey, not how products are made."
+                    },
+                    {
+                        question: "Understanding consumer behaviour helps marketers to...",
+                        options: ["Reduce production costs", "Identify customer needs and wants", "Speed up delivery times", "Lower employee salaries"],
+                        correct: 1,
+                        explanation: "The primary benefit of understanding consumer behaviour is identifying what customers actually need and want, enabling better products and marketing strategies."
+                    },
+                    {
+                        question: "When Rahul researches laptops online before buying, which aspect of consumer behaviour is he demonstrating?",
+                        options: ["Disposal", "Selection", "Usage", "Manufacturing"],
+                        correct: 1,
+                        explanation: "Researching and comparing options is part of the 'Selection' phase of consumer behaviour - how consumers choose between alternatives."
+                    },
+                    {
+                        question: "Product disposal as part of consumer behaviour includes...",
+                        options: ["Only throwing products away", "Recycling, reselling, or discarding", "Only recycling", "Returning defective items"],
+                        correct: 1,
+                        explanation: "Disposal encompasses all ways consumers get rid of products - recycling, reselling (like on OLX), donating, or discarding. Modern consumers are increasingly conscious of sustainable disposal."
+                    }
+                ]
+            },
+            "1.2": {
+                id: "1.2",
+                name: "Decision Making Process",
+                icon: "🎯",
+                xp: 25,
+                content: `
+                    <div class="content-panel">
+                        <h3 class="content-title">🎯 The 5-Stage Decision Making Process</h3>
+                        <div class="content-text">
+                            <p>Consumers go through a systematic process when making purchase decisions. Understanding these stages helps marketers influence decisions at each point.</p>
+
+                            <h4 style="color:#00f5ff;margin-top:20px;">Stage 1: Need Recognition 💡</h4>
+                            <p>The buying process starts when the consumer recognizes a <span class="key-term">need</span> or <span class="key-term">problem</span> - a gap between their current state and desired state.</p>
+                            <div class="example-box">
+                                <strong>Example:</strong> Riya's phone battery dies by noon every day. She realizes she needs a new phone with better battery life.
+                            </div>
+
+                            <h4 style="color:#00f5ff;margin-top:20px;">Stage 2: Information Search 🔍</h4>
+                            <p>Once aware of a need, consumers seek information about solutions. Sources include:</p>
+                            <ul>
+                                <li><strong>Personal:</strong> Family, friends, colleagues</li>
+                                <li><strong>Commercial:</strong> Advertising, salespeople, websites</li>
+                                <li><strong>Public:</strong> Reviews, YouTube, social media</li>
+                                <li><strong>Experiential:</strong> Trying the product in-store</li>
+                            </ul>
+
+                            <h4 style="color:#00f5ff;margin-top:20px;">Stage 3: Evaluation of Alternatives ⚖️</h4>
+                            <p>Consumers compare different options based on attributes important to them (price, features, brand reputation, etc.).</p>
+                            <div class="example-box">
+                                <strong>Example:</strong> Riya compares iPhone 15, Samsung S24, and OnePlus 12 on camera quality, battery life, and price.
+                            </div>
+
+                            <h4 style="color:#00f5ff;margin-top:20px;">Stage 4: Purchase Decision 🛒</h4>
+                            <p>The consumer decides which brand to buy. Factors like store availability, payment options, and last-minute deals can influence the final choice.</p>
+
+                            <h4 style="color:#00f5ff;margin-top:20px;">Stage 5: Post-Purchase Behaviour 🔄</h4>
+                            <p>After buying, consumers evaluate their satisfaction. They may experience:</p>
+                            <ul>
+                                <li><strong>Satisfaction:</strong> Product meets or exceeds expectations → loyalty, positive word-of-mouth</li>
+                                <li><strong>Cognitive Dissonance:</strong> Doubt about the decision → may seek reassurance</li>
+                                <li><strong>Dissatisfaction:</strong> Product falls short → complaints, returns, negative reviews</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    {
+                        question: "What is the FIRST stage in the consumer decision-making process?",
+                        options: ["Information Search", "Need Recognition", "Evaluation of Alternatives", "Purchase Decision"],
+                        correct: 1,
+                        explanation: "Need Recognition comes first - the consumer must realize they have a need or problem before they start searching for solutions."
+                    },
+                    {
+                        question: "Amit realizes his laptop is too slow for video editing. This is an example of...",
+                        options: ["Information Search", "Need Recognition", "Post-Purchase Behaviour", "Evaluation"],
+                        correct: 1,
+                        explanation: "Amit recognizing a gap (slow laptop vs. need for video editing) is Need Recognition - the trigger that starts the buying process."
+                    },
+                    {
+                        question: "Watching YouTube reviews and asking friends for recommendations is which stage?",
+                        options: ["Need Recognition", "Information Search", "Purchase Decision", "Evaluation"],
+                        correct: 1,
+                        explanation: "Gathering information from various sources (YouTube reviews = public source, friends = personal source) is the Information Search stage."
+                    },
+                    {
+                        question: "Comparing iPhone vs Samsung vs OnePlus based on features and price is...",
+                        options: ["Information Search", "Need Recognition", "Evaluation of Alternatives", "Post-Purchase"],
+                        correct: 2,
+                        explanation: "When comparing specific options against each other on various attributes, you're in the Evaluation of Alternatives stage."
+                    },
+                    {
+                        question: "After buying a new car, Rahul keeps reading positive reviews to feel good about his purchase. This is called...",
+                        options: ["Information Search", "Need Recognition", "Cognitive Dissonance", "Evaluation"],
+                        correct: 2,
+                        explanation: "Seeking reassurance after a major purchase is a sign of Cognitive Dissonance - post-purchase doubt where consumers look for confirmation they made the right choice."
+                    },
+                    {
+                        question: "Which source of information is MOST trusted by consumers?",
+                        options: ["TV advertisements", "Personal (friends & family)", "Company websites", "Salespeople"],
+                        correct: 1,
+                        explanation: "Personal sources (friends, family, colleagues) are typically the most trusted because they have no commercial interest and share genuine experiences."
+                    }
+                ]
+            },
+            "1.3": {
+                id: "1.3",
+                name: "Types of Buying Behaviour",
+                icon: "🛒",
+                xp: 30,
+                content: `
+                    <div class="content-panel">
+                        <h3 class="content-title">🛒 4 Types of Buying Behaviour</h3>
+                        <div class="content-text">
+                            <p>Consumer buying behaviour varies based on two key factors:</p>
+                            <ul>
+                                <li><strong>Level of Involvement:</strong> How important is this purchase to the consumer?</li>
+                                <li><strong>Brand Differences:</strong> How different are the available options?</li>
+                            </ul>
+
+                            <h4 style="color:#ff6ec7;margin-top:25px;">1. Complex Buying Behaviour 🏠</h4>
+                            <p><strong>High Involvement + Significant Brand Differences</strong></p>
+                            <p>Used for expensive, risky, or infrequent purchases. Consumers do extensive research.</p>
+                            <div class="example-box">
+                                <strong>Examples:</strong> Buying a house, car, laptop, or choosing a college<br>
+                                <strong>Marketing Strategy:</strong> Provide detailed information, comparisons, and expert reviews
+                            </div>
+
+                            <h4 style="color:#7b68ee;margin-top:25px;">2. Dissonance-Reducing Behaviour 🛋️</h4>
+                            <p><strong>High Involvement + Few Brand Differences</strong></p>
+                            <p>Brands seem similar, but purchase matters. May experience post-purchase doubt.</p>
+                            <div class="example-box">
+                                <strong>Examples:</strong> Carpet, tiles, furniture, air conditioner<br>
+                                <strong>Marketing Strategy:</strong> After-sale support, reassurance communication
+                            </div>
+
+                            <h4 style="color:#00f5ff;margin-top:25px;">3. Variety-Seeking Behaviour 🍫</h4>
+                            <p><strong>Low Involvement + Significant Brand Differences</strong></p>
+                            <p>Consumer switches brands for novelty, not dissatisfaction.</p>
+                            <div class="example-box">
+                                <strong>Examples:</strong> Snacks, chocolates, soft drinks, cosmetics<br>
+                                <strong>Marketing Strategy:</strong> Eye-catching packaging, promotions, shelf placement
+                            </div>
+
+                            <h4 style="color:#00ff88;margin-top:25px;">4. Habitual Buying Behaviour 🧂</h4>
+                            <p><strong>Low Involvement + Few Brand Differences</strong></p>
+                            <p>Routine purchases made without much thought. Brand loyalty through habit.</p>
+                            <div class="example-box">
+                                <strong>Examples:</strong> Salt, sugar, milk, bread, toothpaste<br>
+                                <strong>Marketing Strategy:</strong> Price promotions, prominent displays, repetitive advertising
+                            </div>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    {
+                        question: "Buying salt at the grocery store without much thought is an example of...",
+                        options: ["Complex Buying Behaviour", "Variety-Seeking Behaviour", "Habitual Buying Behaviour", "Dissonance-Reducing Behaviour"],
+                        correct: 2,
+                        explanation: "Salt is a low-involvement purchase with few brand differences - classic Habitual Buying. Consumers grab whatever they usually buy without comparing options."
+                    },
+                    {
+                        question: "Buying a house involves extensive research and comparison. This is...",
+                        options: ["Habitual Buying", "Complex Buying Behaviour", "Variety-Seeking", "Impulse Buying"],
+                        correct: 1,
+                        explanation: "A house is high involvement (expensive, important) with significant differences between options - Complex Buying Behaviour requires extensive decision-making."
+                    },
+                    {
+                        question: "Priya tries a different chocolate brand each time she shops, just for variety. This is...",
+                        options: ["Complex Buying", "Habitual Buying", "Variety-Seeking Behaviour", "Dissonance-Reducing"],
+                        correct: 2,
+                        explanation: "Switching brands for novelty (not dissatisfaction) in a low-involvement category with many options is Variety-Seeking Behaviour."
+                    },
+                    {
+                        question: "High involvement + Few perceived brand differences = ?",
+                        options: ["Complex Buying", "Variety-Seeking", "Habitual Buying", "Dissonance-Reducing Behaviour"],
+                        correct: 3,
+                        explanation: "When the purchase matters (high involvement) but brands seem similar (few differences), consumers may experience post-purchase doubt - Dissonance-Reducing Behaviour."
+                    },
+                    {
+                        question: "For Variety-Seeking products, the best marketing strategy is...",
+                        options: ["Detailed product comparisons", "After-sale support calls", "Eye-catching packaging and shelf placement", "Technical specifications"],
+                        correct: 2,
+                        explanation: "Since consumers switch for novelty, marketers should focus on visual appeal, packaging, promotions, and prominent shelf placement to catch attention."
+                    },
+                    {
+                        question: "Which buying behaviour requires the MOST extensive decision-making?",
+                        options: ["Habitual", "Variety-Seeking", "Complex", "Dissonance-Reducing"],
+                        correct: 2,
+                        explanation: "Complex Buying Behaviour involves the most research because it combines high involvement (important purchase) with significant brand differences (many factors to compare)."
+                    }
+                ]
+            },
+            "2.1": {
+                id: "2.1",
+                name: "Market Segmentation",
+                icon: "📊",
+                xp: 25,
+                content: `
+                    <div class="content-panel">
+                        <h3 class="content-title">📊 Market Segmentation</h3>
+                        <div class="content-text">
+                            <p><span class="key-term">Market Segmentation</span> is the process of dividing a broad market into distinct subgroups of consumers who have common needs, characteristics, or behaviours.</p>
+
+                            <h4 style="color:#00f5ff;margin-top:20px;">Why Segment?</h4>
+                            <ul>
+                                <li>Not all customers are the same</li>
+                                <li>Resources are limited - can't target everyone</li>
+                                <li>Better to be a big fish in a small pond</li>
+                                <li>Enables customized marketing strategies</li>
+                            </ul>
+
+                            <h4 style="color:#7b68ee;margin-top:25px;">4 Types of Segmentation:</h4>
+
+                            <h5 style="color:#ff6ec7;margin-top:15px;">1. Geographic Segmentation 🌍</h5>
+                            <p>Dividing by location: country, region, city, climate, urban/rural</p>
+                            <div class="example-box">
+                                <strong>Example:</strong> McDonald's offers McAloo Tikki in India, Teriyaki burger in Japan - menu varies by country
+                            </div>
+
+                            <h5 style="color:#ff6ec7;margin-top:15px;">2. Demographic Segmentation 👥</h5>
+                            <p>Dividing by measurable characteristics: age, gender, income, education, occupation, family size</p>
+                            <div class="example-box">
+                                <strong>Example:</strong> Johnson's Baby targets parents of infants; Raymond targets working professionals
+                            </div>
+
+                            <h5 style="color:#ff6ec7;margin-top:15px;">3. Psychographic Segmentation 🧠</h5>
+                            <p>Dividing by lifestyle, personality, values, interests, attitudes</p>
+                            <div class="example-box">
+                                <strong>Example:</strong> Harley-Davidson targets freedom-seekers and rebels; Nike targets achievement-oriented individuals
+                            </div>
+
+                            <h5 style="color:#ff6ec7;margin-top:15px;">4. Behavioural Segmentation 🛒</h5>
+                            <p>Dividing by usage rate, loyalty status, benefits sought, occasion</p>
+                            <div class="example-box">
+                                <strong>Example:</strong> Airlines have frequent flyer programs for heavy users; Cadbury targets gift-givers during festivals
+                            </div>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    {
+                        question: "Market Segmentation is the process of...",
+                        options: ["Selling to everyone equally", "Dividing market into distinct groups", "Setting different prices", "Creating advertisements"],
+                        correct: 1,
+                        explanation: "Segmentation is about dividing a large market into smaller, more manageable groups of consumers with similar needs or characteristics."
+                    },
+                    {
+                        question: "Targeting fitness enthusiasts and health-conscious consumers is which type of segmentation?",
+                        options: ["Geographic", "Demographic", "Psychographic", "Behavioural"],
+                        correct: 2,
+                        explanation: "Psychographic segmentation is based on lifestyle, interests, and values. Fitness enthusiasm is a lifestyle choice, not a demographic characteristic."
+                    },
+                    {
+                        question: "Urban vs Rural customer division is an example of...",
+                        options: ["Geographic Segmentation", "Demographic Segmentation", "Psychographic Segmentation", "Behavioural Segmentation"],
+                        correct: 0,
+                        explanation: "Geographic segmentation divides markets by location - country, region, city size, or urban/rural classification."
+                    },
+                    {
+                        question: "Dividing customers by age, gender, and income is...",
+                        options: ["Geographic", "Demographic", "Psychographic", "Behavioural"],
+                        correct: 1,
+                        explanation: "Demographic segmentation uses measurable population characteristics like age, gender, income, education, and occupation."
+                    },
+                    {
+                        question: "An airline's frequent flyer program that rewards heavy users is based on...",
+                        options: ["Geographic segmentation", "Demographic segmentation", "Psychographic segmentation", "Behavioural segmentation"],
+                        correct: 3,
+                        explanation: "Behavioural segmentation divides customers by their behaviour - usage rate, loyalty, benefits sought. Frequent flyers are heavy users."
+                    }
+                ]
+            },
+            "2.2": {
+                id: "2.2",
+                name: "Targeting & Positioning",
+                icon: "🎪",
+                xp: 25,
+                content: `
+                    <div class="content-panel">
+                        <h3 class="content-title">🎪 STP: Targeting & Positioning</h3>
+                        <div class="content-text">
+                            <p><span class="key-term">STP</span> stands for <strong>Segmentation, Targeting, Positioning</strong> - the foundation of modern marketing strategy.</p>
+
+                            <h4 style="color:#00f5ff;margin-top:20px;">Targeting Strategies 🎯</h4>
+                            <p>After segmenting the market, companies must decide which segments to target:</p>
+
+                            <h5 style="color:#ff6ec7;margin-top:15px;">1. Undifferentiated (Mass) Marketing</h5>
+                            <p>One offer for the entire market - ignore segment differences</p>
+                            <div class="example-box"><strong>Example:</strong> Coca-Cola's original strategy - same product for everyone</div>
+
+                            <h5 style="color:#ff6ec7;margin-top:15px;">2. Differentiated Marketing</h5>
+                            <p>Different offers for different segments</p>
+                            <div class="example-box"><strong>Example:</strong> Toyota sells Innova for families, Camry for executives, Fortuner for adventurers</div>
+
+                            <h5 style="color:#ff6ec7;margin-top:15px;">3. Concentrated (Niche) Marketing</h5>
+                            <p>Focus all resources on one specific segment</p>
+                            <div class="example-box"><strong>Example:</strong> Rolex focuses only on luxury segment; Ferrari targets ultra-wealthy car enthusiasts</div>
+
+                            <h5 style="color:#ff6ec7;margin-top:15px;">4. Micromarketing</h5>
+                            <p>Tailoring products to specific individuals or locations</p>
+                            <div class="example-box"><strong>Example:</strong> Nike ID allows customers to customize their shoes</div>
+
+                            <h4 style="color:#7b68ee;margin-top:25px;">Positioning 📍</h4>
+                            <p><span class="key-term">Positioning</span> is how you want customers to perceive your brand relative to competitors in their minds.</p>
+
+                            <div class="example-box">
+                                <strong>Positioning Examples:</strong><br>
+                                • Volvo = Safety<br>
+                                • BMW = Driving pleasure<br>
+                                • Maruti = Value for money<br>
+                                • Apple = Innovation & Premium
+                            </div>
+
+                            <h4 style="color:#00ff88;margin-top:20px;">Perceptual Map</h4>
+                            <p>A visual tool showing how brands are positioned based on key attributes:</p>
+                            <pre style="color:#00f5ff;background:rgba(0,0,0,0.3);padding:15px;border-radius:10px;margin-top:10px;">
+        HIGH QUALITY
+             |
+    Rolex   |   Tag Heuer
+             |
+LOW PRICE --+-- HIGH PRICE
+             |
+    Casio   |   Fossil
+             |
+        LOW QUALITY
+                            </pre>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    {
+                        question: "What does STP stand for?",
+                        options: ["Sales, Trade, Profit", "Segmentation, Targeting, Positioning", "Strategy, Tactics, Planning", "Supply, Transport, Production"],
+                        correct: 1,
+                        explanation: "STP = Segmentation (divide market), Targeting (choose segments), Positioning (create distinct image). It's the foundation of marketing strategy."
+                    },
+                    {
+                        question: "Rolex focuses exclusively on the luxury watch segment. This is...",
+                        options: ["Undifferentiated Marketing", "Differentiated Marketing", "Concentrated Marketing", "Mass Marketing"],
+                        correct: 2,
+                        explanation: "Concentrated (Niche) Marketing means focusing all resources on one specific segment. Rolex doesn't try to make affordable watches - they own the luxury segment."
+                    },
+                    {
+                        question: "Positioning refers to...",
+                        options: ["Where products are placed in stores", "How customers perceive your brand vs competitors", "Geographic location of headquarters", "Inventory management"],
+                        correct: 1,
+                        explanation: "Positioning is about the place your brand occupies in customers' minds relative to competitors - the mental image and associations."
+                    },
+                    {
+                        question: "Toyota selling Innova for families and Camry for executives is...",
+                        options: ["Undifferentiated Marketing", "Differentiated Marketing", "Concentrated Marketing", "Micromarketing"],
+                        correct: 1,
+                        explanation: "Differentiated Marketing means offering different products for different segments. Toyota targets multiple segments with different car models."
+                    },
+                    {
+                        question: "Which brand is positioned around 'Safety'?",
+                        options: ["BMW", "Volvo", "Ferrari", "Toyota"],
+                        correct: 1,
+                        explanation: "Volvo has consistently positioned itself around safety - it's the first thing people think of when they hear 'Volvo'. That's successful positioning!"
+                    }
+                ]
+            },
+            "2.3": {
+                id: "2.3",
+                name: "Customer Retention & Churn",
+                icon: "📈",
+                xp: 30,
+                content: `
+                    <div class="content-panel">
+                        <h3 class="content-title">📈 Customer Retention & Churn Rate</h3>
+                        <div class="content-text">
+                            <p>Acquiring new customers costs <strong>5-25x more</strong> than retaining existing ones. That's why retention matters!</p>
+
+                            <h4 style="color:#00f5ff;margin-top:20px;">Customer Retention Rate 💚</h4>
+                            <p>The percentage of customers a company keeps over a given period.</p>
+
+                            <div style="background:rgba(0,245,255,0.1);padding:20px;border-radius:10px;margin:15px 0;text-align:center;">
+                                <p style="font-size:20px;margin-bottom:10px;"><strong>Retention Rate Formula:</strong></p>
+                                <p style="font-size:24px;color:#00f5ff;">((CE - CN) / CS) × 100</p>
+                                <p style="margin-top:10px;">CE = Customers at End<br>CN = New Customers acquired<br>CS = Customers at Start</p>
+                            </div>
+
+                            <div class="example-box">
+                                <strong>Example Calculation:</strong><br>
+                                Start of year: 1000 customers<br>
+                                New customers gained: 200<br>
+                                End of year: 900 customers<br><br>
+                                Retention Rate = ((900 - 200) / 1000) × 100 = <strong>70%</strong><br>
+                                This means 300 customers left (churned) during the year.
+                            </div>
+
+                            <h4 style="color:#ff6ec7;margin-top:25px;">Churn Rate 💔</h4>
+                            <p>The percentage of customers who stop using your product/service.</p>
+
+                            <div style="background:rgba(255,110,199,0.1);padding:20px;border-radius:10px;margin:15px 0;text-align:center;">
+                                <p style="font-size:20px;margin-bottom:10px;"><strong>Simple Relationship:</strong></p>
+                                <p style="font-size:24px;color:#ff6ec7;">Churn Rate = 100% - Retention Rate</p>
+                            </div>
+
+                            <h4 style="color:#7b68ee;margin-top:25px;">Why Retention Matters 🎯</h4>
+                            <ul>
+                                <li>Retained customers spend <strong>67% more</strong> than new ones</li>
+                                <li>A 5% increase in retention can boost profits by <strong>25-95%</strong></li>
+                                <li>Loyal customers become <strong>brand advocates</strong></li>
+                                <li>Lower marketing costs to existing customers</li>
+                            </ul>
+
+                            <h4 style="color:#00ff88;margin-top:25px;">Retention Strategies 🛡️</h4>
+                            <ul>
+                                <li><strong>Loyalty Programs:</strong> Rewards for repeat purchases</li>
+                                <li><strong>Excellent Customer Service:</strong> Quick resolution of issues</li>
+                                <li><strong>Personalization:</strong> Tailored experiences and recommendations</li>
+                                <li><strong>Regular Communication:</strong> Newsletters, updates, special offers</li>
+                                <li><strong>Feedback Loops:</strong> Listen and act on customer input</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                questions: [
+                    {
+                        question: "Customer Retention Rate measures...",
+                        options: ["New customers acquired", "Percentage of customers kept over time", "Total revenue generated", "Market share percentage"],
+                        correct: 1,
+                        explanation: "Retention Rate specifically measures what percentage of existing customers you managed to keep during a period."
+                    },
+                    {
+                        question: "A company started with 1000 customers, gained 200 new customers, and ended with 900. What is the retention rate?",
+                        options: ["70%", "80%", "90%", "60%"],
+                        correct: 0,
+                        explanation: "Using the formula: ((CE-CN)/CS) × 100 = ((900-200)/1000) × 100 = (700/1000) × 100 = 70%. They retained 700 of the original 1000 customers."
+                    },
+                    {
+                        question: "If the retention rate is 70%, what is the churn rate?",
+                        options: ["70%", "30%", "100%", "50%"],
+                        correct: 1,
+                        explanation: "Churn Rate = 100% - Retention Rate = 100% - 70% = 30%. These two metrics always add up to 100%."
+                    },
+                    {
+                        question: "Acquiring new customers costs approximately how much more than retaining existing ones?",
+                        options: ["2x more", "5-25x more", "Same cost", "50% less"],
+                        correct: 1,
+                        explanation: "Research shows acquiring new customers costs 5-25 times more than retaining existing ones. That's why retention is so valuable!"
+                    },
+                    {
+                        question: "Which is NOT a typical customer retention strategy?",
+                        options: ["Loyalty programs", "Price wars with competitors", "Excellent customer service", "Personalized recommendations"],
+                        correct: 1,
+                        explanation: "Price wars focus on attracting competitors' customers (acquisition), not retaining your own. Effective retention comes from value, service, and relationships."
+                    },
+                    {
+                        question: "A 5% increase in customer retention can boost profits by...",
+                        options: ["5-10%", "25-95%", "1-2%", "100%"],
+                        correct: 1,
+                        explanation: "Studies show a 5% increase in retention can boost profits by 25-95%! This is because retained customers buy more and cost less to serve over time."
+                    }
+                ]
+            }
+        };
+
+        const achievements = [
+            { id: "first_lesson", name: "First Steps", icon: "🌟", desc: "Complete your first lesson" },
+            { id: "perfect", name: "Perfectionist", icon: "💎", desc: "Complete a lesson with no mistakes" },
+            { id: "streak_3", name: "On Fire", icon: "🔥", desc: "3 day streak" },
+            { id: "xp_100", name: "Century", icon: "💯", desc: "Earn 100 XP" },
+            { id: "unit_complete", name: "Unit Master", icon: "🏆", desc: "Complete all lessons in a unit" },
+            { id: "all_lessons", name: "Consumer Expert", icon: "👑", desc: "Complete all lessons" }
+        ];
+
+        // ==================== THREE.JS 3D SCENE ====================
+        let scene, camera, renderer, iceberg, particles;
+
+        function init3D() {
+            const canvas = document.getElementById('three-canvas');
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Create iceberg geometry
+            const geometry = new THREE.OctahedronGeometry(2, 0);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x00f5ff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            iceberg = new THREE.Mesh(geometry, material);
+            scene.add(iceberg);
+
+            // Inner glow
+            const innerGeometry = new THREE.OctahedronGeometry(1.8, 0);
+            const innerMaterial = new THREE.MeshBasicMaterial({
+                color: 0x7b68ee,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.2
+            });
+            const innerIceberg = new THREE.Mesh(innerGeometry, innerMaterial);
+            iceberg.add(innerIceberg);
+
+            // Particles
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particleCount = 200;
+            const positions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 20;
+                positions[i + 1] = (Math.random() - 0.5) * 20;
+                positions[i + 2] = (Math.random() - 0.5) * 20;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const particlesMaterial = new THREE.PointsMaterial({
+                color: 0x00f5ff,
+                size: 0.05,
+                transparent: true,
+                opacity: 0.6
+            });
+
+            particles = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particles);
+
+            camera.position.z = 6;
+
+            animate3D();
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+
+            if (iceberg) {
+                iceberg.rotation.y += 0.005;
+                iceberg.rotation.x = Math.sin(Date.now() * 0.001) * 0.1;
+            }
+
+            if (particles) {
+                particles.rotation.y += 0.001;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // ==================== UI FUNCTIONS ====================
+        function showScreen(screenId) {
+            playSound('click');
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(screenId + '-screen').classList.add('active');
+            event.target.classList.add('active');
+
+            if (screenId === 'achievements') renderAchievements();
+            if (screenId === 'profile') updateProfile();
+        }
+
+        function updateUI() {
+            document.getElementById('streak').textContent = state.streak;
+            document.getElementById('level').textContent = Math.floor(state.xp / 100) + 1;
+            document.getElementById('hearts').textContent = state.hearts;
+            document.getElementById('gems').textContent = state.gems;
+            document.getElementById('daily-xp').textContent = state.dailyXp;
+            document.getElementById('daily-progress').style.width = Math.min(100, (state.dailyXp / 30) * 100) + '%';
+
+            renderLessons();
+            saveState();
+        }
+
+        function renderLessons() {
+            const unit1 = document.getElementById('unit1-lessons');
+            const unit2 = document.getElementById('unit2-lessons');
+
+            unit1.innerHTML = '';
+            unit2.innerHTML = '';
+
+            const unit1Lessons = ['1.1', '1.2', '1.3'];
+            const unit2Lessons = ['2.1', '2.2', '2.3'];
+
+            unit1Lessons.forEach((id, idx) => {
+                const lesson = lessons[id];
+                const completed = state.completedLessons.has(id);
+                const available = idx === 0 || state.completedLessons.has(unit1Lessons[idx - 1]);
+
+                unit1.innerHTML += createLessonCard(lesson, completed, available);
+            });
+
+            unit2Lessons.forEach((id, idx) => {
+                const lesson = lessons[id];
+                const completed = state.completedLessons.has(id);
+                const available = state.completedLessons.has('1.3') && (idx === 0 || state.completedLessons.has(unit2Lessons[idx - 1]));
+
+                unit2.innerHTML += createLessonCard(lesson, completed, available);
+            });
+        }
+
+        function createLessonCard(lesson, completed, available) {
+            const statusClass = completed ? 'completed' : (available ? '' : 'locked');
+            const icon = completed ? '✅' : (available ? lesson.icon : '🔒');
+            const onclick = available || completed ? `onclick="startLesson('${lesson.id}')"` : '';
+
+            return `
+                <div class="lesson-card ${statusClass}" ${onclick}>
+                    <div class="lesson-icon">${icon}</div>
+                    <div class="lesson-name">${lesson.name}</div>
+                    <div class="lesson-xp">+${lesson.xp} XP</div>
+                </div>
+            `;
+        }
+
+        function startLesson(lessonId) {
+            playSound('click');
+            state.currentLesson = lessons[lessonId];
+            state.currentQuestion = 0;
+            state.mistakes = 0;
+            state.selectedAnswer = null;
+
+            renderLesson();
+        }
+
+        function renderLesson() {
+            const lesson = state.currentLesson;
+            const screen = document.getElementById('lesson-screen');
+
+            if (state.currentQuestion === 0) {
+                // Show content first
+                screen.innerHTML = `
+                    <div class="question-header">
+                        <button class="back-btn" onclick="exitLesson()">← Exit</button>
+                        <div style="flex:1;"><div class="progress-container"><div class="progress-fill" style="width:0%;"></div></div></div>
+                        <div class="hearts">${'❤️'.repeat(state.hearts)}</div>
+                    </div>
+                    ${lesson.content}
+                    <button class="check-btn" onclick="startQuestions()">Start Quiz →</button>
+                `;
+            } else {
+                renderQuestion();
+            }
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            screen.classList.add('active');
+        }
+
+        function startQuestions() {
+            playSound('click');
+            state.currentQuestion = 1;
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const lesson = state.currentLesson;
+            const q = lesson.questions[state.currentQuestion - 1];
+            const progress = (state.currentQuestion / lesson.questions.length) * 100;
+
+            const screen = document.getElementById('lesson-screen');
+            screen.innerHTML = `
+                <div class="question-header">
+                    <button class="back-btn" onclick="exitLesson()">← Exit</button>
+                    <div style="flex:1;"><div class="progress-container"><div class="progress-fill" style="width:${progress}%;"></div></div></div>
+                    <div class="hearts">${'❤️'.repeat(state.hearts)}</div>
+                </div>
+
+                <div class="question-box">
+                    <p class="question-text">${q.question}</p>
+                </div>
+
+                <div class="options" id="options">
+                    ${q.options.map((opt, i) => `
+                        <button class="option" onclick="selectAnswer(${i})">${opt}</button>
+                    `).join('')}
+                </div>
+
+                <div class="feedback" id="feedback"></div>
+
+                <button class="check-btn" id="check-btn" onclick="checkAnswer()" disabled>CHECK</button>
+            `;
+        }
+
+        function selectAnswer(index) {
+            playSound('click');
+            state.selectedAnswer = index;
+
+            document.querySelectorAll('.option').forEach((opt, i) => {
+                opt.classList.toggle('selected', i === index);
+            });
+
+            document.getElementById('check-btn').disabled = false;
+        }
+
+        function checkAnswer() {
+            const lesson = state.currentLesson;
+            const q = lesson.questions[state.currentQuestion - 1];
+            const correct = state.selectedAnswer === q.correct;
+
+            const options = document.querySelectorAll('.option');
+            options.forEach((opt, i) => {
+                opt.onclick = null;
+                if (i === q.correct) opt.classList.add('correct');
+                else if (i === state.selectedAnswer) opt.classList.add('incorrect');
+            });
+
+            const feedback = document.getElementById('feedback');
+            feedback.className = 'feedback show ' + (correct ? 'correct' : 'incorrect');
+            feedback.innerHTML = `
+                <div class="feedback-title">${correct ? '✨ Correct!' : '❌ Not quite!'}</div>
+                <p>${q.explanation}</p>
+            `;
+
+            if (correct) {
+                playSound('correct');
+            } else {
+                playSound('incorrect');
+                state.hearts--;
+                state.mistakes++;
+            }
+
+            const btn = document.getElementById('check-btn');
+            btn.textContent = 'CONTINUE';
+            btn.onclick = nextQuestion;
+        }
+
+        function nextQuestion() {
+            state.currentQuestion++;
+            state.selectedAnswer = null;
+
+            if (state.currentQuestion > state.currentLesson.questions.length) {
+                completeLesson();
+            } else {
+                renderQuestion();
+            }
+        }
+
+        function completeLesson() {
+            playSound('complete');
+
+            const lesson = state.currentLesson;
+            let xpEarned = lesson.xp;
+
+            if (state.mistakes === 0) {
+                xpEarned += 10;
+                state.achievements.add('perfect');
+            }
+
+            if (!state.completedLessons.has(lesson.id)) {
+                state.completedLessons.add(lesson.id);
+                state.xp += xpEarned;
+                state.dailyXp += xpEarned;
+                state.gems += 5;
+            }
+
+            // Check achievements
+            if (state.completedLessons.size === 1) state.achievements.add('first_lesson');
+            if (state.xp >= 100) state.achievements.add('xp_100');
+            if (state.completedLessons.size === 6) state.achievements.add('all_lessons');
+
+            const accuracy = Math.max(0, 100 - (state.mistakes * 20));
+
+            const screen = document.getElementById('lesson-screen');
+            screen.innerHTML = `
+                <div class="celebration">
+                    <div class="celebration-icon">🎉</div>
+                    <h1 class="celebration-title">Lesson Complete!</h1>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-value">+${xpEarned}</div>
+                            <div class="stat-card-label">XP Earned</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-value">${accuracy}%</div>
+                            <div class="stat-card-label">Accuracy</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-value">+5</div>
+                            <div class="stat-card-label">Gems</div>
+                        </div>
+                    </div>
+
+                    ${state.mistakes === 0 ? '<p style="color:#00f5ff;font-size:20px;">🌟 PERFECT! No mistakes!</p>' : ''}
+
+                    <button class="check-btn" onclick="exitLesson()">Continue Learning</button>
+                </div>
+            `;
+
+            saveState();
+        }
+
+        function exitLesson() {
+            playSound('click');
+            state.currentLesson = null;
+            state.currentQuestion = 0;
+            updateUI();
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('home-screen').classList.add('active');
+        }
+
+        function renderAchievements() {
+            const grid = document.getElementById('achievements-grid');
+            grid.innerHTML = achievements.map(a => {
+                const unlocked = state.achievements.has(a.id);
+                return `
+                    <div class="lesson-card ${unlocked ? 'completed' : 'locked'}">
+                        <div class="lesson-icon">${unlocked ? a.icon : '🔒'}</div>
+                        <div class="lesson-name">${a.name}</div>
+                        <div class="lesson-xp">${a.desc}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateProfile() {
+            document.getElementById('profile-level').textContent = Math.floor(state.xp / 100) + 1;
+            document.getElementById('total-xp').textContent = state.xp;
+            document.getElementById('total-lessons').textContent = state.completedLessons.size;
+            document.getElementById('total-gems').textContent = state.gems;
+        }
+
+        // ==================== INIT ====================
+        loadState();
+        init3D();
+        updateUI();
+    </script>
+</body>
+</html>
